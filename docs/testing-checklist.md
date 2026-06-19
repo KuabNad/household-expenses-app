@@ -23,6 +23,8 @@ Use two distinct email addresses. For the best sync test, use two devices.
 - [ ] Confirm expense rows use the selected category and income rows update monthly income.
 - [ ] Import the same table again and confirm likely duplicate expenses are unselected.
 - [ ] Import an `.xlsx` file with the same headers and confirm it produces the same preview.
+- [ ] Import a Spanish `Concepto;Fecha;Importe;Saldo` export and confirm EUR, signs, and dates.
+- [ ] Import a Polish mBank export and confirm metadata rows are skipped and PLN is detected.
 - [ ] Cancel an import and confirm no transactions are written.
 - [ ] Share the invite code from Settings.
 - [ ] Register account B and join the household with the invite code.

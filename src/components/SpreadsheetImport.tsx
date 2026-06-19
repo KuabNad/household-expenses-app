@@ -35,8 +35,14 @@ function normalizedName(value: string) {
 async function readPickedFile(asset: DocumentPicker.DocumentPickerAsset) {
   const extension = asset.name.split('.').pop()?.toLowerCase();
   if (extension === 'csv' || extension === 'tsv' || asset.mimeType === 'text/csv') {
-    const text = asset.file ? await asset.file.text() : await new ExpoFile(asset.uri).text();
-    const parsed = Papa.parse<(string | number | null)[]>(text, {
+    let text = asset.file ? await asset.file.text() : await new ExpoFile(asset.uri).text();
+    if (text.includes('\uFFFD')) {
+      const bytes = asset.file
+        ? new Uint8Array(await asset.file.arrayBuffer())
+        : await new ExpoFile(asset.uri).bytes();
+      text = new TextDecoder('windows-1250').decode(bytes);
+    }
+    const parsed = Papa.parse<(string | number | null)[]>(text.replace(/^\uFEFF/, ''), {
       delimiter: extension === 'tsv' ? '\t' : '',
       skipEmptyLines: 'greedy',
     });
@@ -72,6 +78,7 @@ export function SpreadsheetImport({
   const [open, setOpen] = useState(false);
   const [fileName, setFileName] = useState('');
   const [rows, setRows] = useState<ReviewRow[]>([]);
+  const [detectedFormat, setDetectedFormat] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const duplicateFingerprints = useMemo(
@@ -114,6 +121,7 @@ export function SpreadsheetImport({
         categories.map((category) => [normalizedName(category.name), category.id]),
       );
       setFileName(asset.name);
+      setDetectedFormat(parsed.detectedFormat);
       setErrors(parsed.errors);
       const seen = new Set<string>();
       setRows(
@@ -201,6 +209,7 @@ export function SpreadsheetImport({
       setRows([]);
       setErrors([]);
       setFileName('');
+      setDetectedFormat('');
       setOpen(false);
       Alert.alert(
         'Importación completada',
@@ -245,6 +254,9 @@ export function SpreadsheetImport({
         variant="secondary"
       />
       {fileName ? <Text style={styles.fileName}>{fileName}</Text> : null}
+      {detectedFormat ? (
+        <Text style={styles.detectedFormat}>Formato reconocido: {detectedFormat}</Text>
+      ) : null}
       {errors.map((error) => (
         <Text key={error} style={styles.error}>
           {error}
@@ -315,6 +327,7 @@ export function SpreadsheetImport({
           setRows([]);
           setErrors([]);
           setFileName('');
+          setDetectedFormat('');
         }}
         variant="text"
       />
@@ -347,6 +360,7 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: 18, fontWeight: '800' },
   subtitle: { color: colors.muted, fontSize: 12, lineHeight: 18 },
   fileName: { color: colors.primary, fontSize: 13, fontWeight: '800' },
+  detectedFormat: { color: colors.muted, fontSize: 12, fontWeight: '700' },
   error: { color: colors.danger, fontSize: 13 },
   reviewHeader: { gap: 3 },
   reviewTitle: { color: colors.text, fontSize: 15, fontWeight: '800' },

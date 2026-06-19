@@ -238,4 +238,90 @@ describe('summary helpers', () => {
       ),
     ).toBe(true);
   });
+
+  it('recognizes the Spanish bank export and derives EUR from amount cells', () => {
+    const result = parseSpreadsheetRows(
+      [
+        ['Concepto', 'Fecha', 'Importe', 'Saldo'],
+        ['PANADERIA LA SALUD', '29/05/2026', '-3,60EUR', '236,44EUR'],
+        ['TRANSFER. EN DIV.', '08/06/2026', '160,00EUR', '187,41EUR'],
+      ],
+      'u1',
+    );
+
+    expect(result.detectedFormat).toBe('Banco español');
+    expect(result.transactions).toMatchObject([
+      {
+        type: 'expense',
+        date: '2026-05-29',
+        amount: 3.6,
+        currency: 'EUR',
+        categoryName: 'Alimentación',
+      },
+      {
+        type: 'income',
+        date: '2026-06-08',
+        amount: 160,
+        currency: 'EUR',
+      },
+    ]);
+  });
+
+  it('recognizes an mBank statement after metadata rows', () => {
+    const result = parseSpreadsheetRows(
+      [
+        ['mBank S.A. Bankowość Detaliczna'],
+        ['#Waluta', 'PLN'],
+        [],
+        [
+          '#Data księgowania',
+          '#Data operacji',
+          '#Opis operacji',
+          '#Tytuł',
+          '#Nadawca/Odbiorca',
+          '#Numer konta',
+          '#Kwota',
+          '#Saldo po operacji',
+        ],
+        [
+          '2026-03-01',
+          '2026-03-01',
+          'ZAKUP PRZY UŻYCIU KARTY',
+          'MERCADONA CUESTA PI/TENERIFE DATA TRANSAKCJI: 2026-02-28',
+          '',
+          '',
+          '-24,03',
+          '95 667,75',
+        ],
+        [
+          '2026-03-18',
+          '2026-03-18',
+          'PRZELEW ZEWNĘTRZNY PRZYCHODZĄCY',
+          'Świadczenie ZUS',
+          'ZUS',
+          '',
+          '1 600,00',
+          '94 000,00',
+        ],
+      ],
+      'u1',
+    );
+
+    expect(result.detectedFormat).toBe('mBank Polonia');
+    expect(result.transactions).toMatchObject([
+      {
+        type: 'expense',
+        description: 'MERCADONA CUESTA PI/TENERIFE',
+        amount: 24.03,
+        currency: 'PLN',
+        categoryName: 'Alimentación',
+      },
+      {
+        type: 'income',
+        description: 'Świadczenie ZUS',
+        amount: 1600,
+        currency: 'PLN',
+      },
+    ]);
+  });
 });

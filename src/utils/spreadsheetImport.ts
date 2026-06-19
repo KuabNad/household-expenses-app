@@ -18,6 +18,7 @@ export interface ParsedSpreadsheetTransaction {
 export interface SpreadsheetParseResult {
   transactions: ParsedSpreadsheetTransaction[];
   errors: string[];
+  detectedFormat: string;
 }
 
 export type SpreadsheetCell = string | number | boolean | Date | null | undefined;
@@ -43,6 +44,70 @@ const HEADER_ALIASES = {
   category: ['categoria', 'category', 'kategoria'],
   type: ['tipo', 'type', 'transactiontype', 'movimiento'],
 } as const;
+
+const CATEGORY_KEYWORDS: Array<{ category: string; keywords: string[] }> = [
+  {
+    category: 'Alimentación',
+    keywords: [
+      'mercadona',
+      'carrefour',
+      'alcampo',
+      'lidl',
+      'panaderia',
+      'pasteleria',
+      'caf.',
+      'vending',
+      'restaurant',
+      'restaurante',
+      'supermercado',
+    ],
+  },
+  {
+    category: 'Servicios',
+    keywords: [
+      'securitas',
+      't-mobile',
+      'apple.com/bill',
+      'domestic and gen',
+      'mecaclima',
+      'tributos',
+      'comunidad',
+      'geo alternativa',
+    ],
+  },
+  {
+    category: 'Transporte',
+    keywords: [
+      'gasolinera',
+      'estacion bp',
+      'gas santa cruz',
+      'parking',
+      'naviera',
+      'fred olsen',
+      'itv',
+    ],
+  },
+  {
+    category: 'Salud',
+    keywords: ['farmacia', 'hospital', 'clinica', 'mutua'],
+  },
+  {
+    category: 'Niños',
+    keywords: ['mundolandia', 'hiperjuguetes', 'neverland', 'juguete'],
+  },
+  {
+    category: 'Entretenimiento',
+    keywords: ['coinbase', 'decathlon', 'peluqueria', 'estilistas'],
+  },
+  {
+    category: 'Viajes',
+    keywords: ['airline', 'hotel', 'booking', 'ryanair', 'binter'],
+  },
+  {
+    category: 'Alquiler / Hipoteca',
+    keywords: ['alquiler', 'hipoteca', 'czynsz'],
+  },
+];
 
 function normalize(value: unknown) {
   return String(value ?? '')
@@ -120,6 +185,135 @@ function parseType(value: SpreadsheetCell, signedAmount: number): ImportedTransa
   return signedAmount < 0 ? 'expense' : 'income';
 }
 
+export function suggestCategory(description: string) {
+  const text = normalize(description);
+  return CATEGORY_KEYWORDS.find(({ keywords }) =>
+    keywords.some((keyword) => text.includes(normalize(keyword))),
+  )?.category;
+}
+
+function stripHash(value: SpreadsheetCell) {
+  return String(value ?? '').replace(/^#/, '').trim();
+}
+
+function cleanMbankDescription(row: SpreadsheetCell[]) {
+  const operation = String(row[2] ?? '').trim();
+  const title = String(row[3] ?? '')
+    .replace(/\s+DATA TRANSAKCJI:.*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const party = String(row[4] ?? '').replace(/\s+/g, ' ').trim();
+  return title || party || operation || 'Operación mBank';
+}
+
+function parseSpanishBankRows(rows: SpreadsheetCell[][], userId: string) {
+  const transactions = rows.slice(1).flatMap((row, index) => {
+    const date = parseDate(row[1]);
+    const description = String(row[0] ?? '').trim();
+    const signedAmount = parseAmount(row[2]);
+    if (!date || !description || signedAmount === null || signedAmount === 0) return [];
+    const currencyMatch = String(row[2] ?? '').toUpperCase().match(/EUR|USD|GBP|PLN|CAD|AUD/);
+    const currency = parseCurrency(currencyMatch?.[0], 'EUR');
+    const type: ImportedTransactionType = signedAmount < 0 ? 'expense' : 'income';
+    const amount = Math.abs(signedAmount);
+    const fingerprint = transactionFingerprint({
+      userId,
+      date,
+      amount,
+      currency,
+      description,
+      type,
+    });
+    return [{
+      id: `${fingerprint}-${index + 2}`,
+      rowNumber: index + 2,
+      type,
+      date,
+      description,
+      amount,
+      currency,
+      categoryName: type === 'expense' ? suggestCategory(description) : undefined,
+      fingerprint,
+    }];
+  });
+  return {
+    transactions,
+    errors: transactions.length ? [] : ['No se encontraron movimientos bancarios válidos.'],
+    detectedFormat: 'Banco español',
+  };
+}
+
+function parseMbankRows(rows: SpreadsheetCell[][], userId: string) {
+  const headerIndex = rows.findIndex((row) =>
+    row.map(stripHash).some((cell) => normalize(cell) === 'dataksiegowania'),
+  );
+  if (headerIndex < 0) {
+    return {
+      transactions: [],
+      errors: ['No se encontró la cabecera de operaciones de mBank.'],
+      detectedFormat: 'mBank Polonia',
+    };
+  }
+  const currencyRow = rows.find((row) => normalize(stripHash(row[0])) === 'waluta');
+  const currency = parseCurrency(currencyRow?.[1], 'PLN');
+  const transactions = rows.slice(headerIndex + 1).flatMap((row, index) => {
+    const date = parseDate(row[1] || row[0]);
+    const signedAmount = parseAmount(row[6]);
+    if (!date || signedAmount === null || signedAmount === 0) return [];
+    const description = cleanMbankDescription(row);
+    const type: ImportedTransactionType = signedAmount < 0 ? 'expense' : 'income';
+    const amount = Math.abs(signedAmount);
+    const fingerprint = transactionFingerprint({
+      userId,
+      date,
+      amount,
+      currency,
+      description,
+      type,
+    });
+    return [{
+      id: `${fingerprint}-${headerIndex + index + 2}`,
+      rowNumber: headerIndex + index + 2,
+      type,
+      date,
+      description,
+      amount,
+      currency,
+      categoryName: type === 'expense' ? suggestCategory(description) : undefined,
+      fingerprint,
+    }];
+  });
+  return {
+    transactions,
+    errors: transactions.length ? [] : ['No se encontraron operaciones de mBank válidas.'],
+    detectedFormat: 'mBank Polonia',
+  };
+}
+
+export function detectSpreadsheetFormat(rows: SpreadsheetCell[][]) {
+  const firstCells = rows
+    .slice(0, 50)
+    .flat()
+    .map((cell) => normalize(stripHash(cell)));
+  if (
+    firstCells.includes('dataksiegowania') &&
+    firstCells.includes('opisoperacji') &&
+    firstCells.includes('kwota')
+  ) {
+    return 'mbank';
+  }
+  const firstRow = rows[0]?.map((cell) => normalize(cell)) ?? [];
+  if (
+    firstRow.includes('concepto') &&
+    firstRow.includes('fecha') &&
+    firstRow.includes('importe') &&
+    firstRow.includes('saldo')
+  ) {
+    return 'spanish-bank';
+  }
+  return 'generic';
+}
+
 export function transactionFingerprint({
   userId,
   date,
@@ -150,7 +344,16 @@ export function parseSpreadsheetRows(
   defaultCurrency: Currency = 'EUR',
 ): SpreadsheetParseResult {
   const errors: string[] = [];
-  if (rows.length < 2) return { transactions: [], errors: ['La tabla no contiene movimientos.'] };
+  if (rows.length < 2) {
+    return {
+      transactions: [],
+      errors: ['La tabla no contiene movimientos.'],
+      detectedFormat: 'Formato desconocido',
+    };
+  }
+  const format = detectSpreadsheetFormat(rows);
+  if (format === 'mbank') return parseMbankRows(rows, userId);
+  if (format === 'spanish-bank') return parseSpanishBankRows(rows, userId);
 
   const headers = rows[0];
   const indexes = {
@@ -168,12 +371,14 @@ export function parseSpreadsheetRows(
     return {
       transactions: [],
       errors: ['La primera fila debe incluir las columnas Fecha y Descripción.'],
+      detectedFormat: 'Tabla genérica',
     };
   }
   if (indexes.amount < 0 && indexes.debit < 0 && indexes.credit < 0) {
     return {
       transactions: [],
       errors: ['Añade una columna Importe o columnas separadas Cargo y Abono.'],
+      detectedFormat: 'Tabla genérica',
     };
   }
 
@@ -233,7 +438,7 @@ export function parseSpreadsheetRows(
     }];
   });
 
-  return { transactions, errors };
+  return { transactions, errors, detectedFormat: 'Tabla genérica' };
 }
 
 export function existingExpenseFingerprints(expenses: Expense[], userId: string) {

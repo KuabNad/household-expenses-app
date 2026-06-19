@@ -188,6 +188,7 @@ Use [docs/import-template.csv](docs/import-template.csv) as a spreadsheet-import
 - The dashboard includes a clickable annual spending heatmap and year-to-date category bars.
 - Each household member can save their own monthly income and see income, expenses paid, and calculated savings for every member.
 - Each member can parse a CSV or Excel `.xlsx` bank table in Añadir, review the detected rows, assign categories, and import only selected transactions. The source file is not uploaded or retained.
+- The importer automatically recognizes the Spanish `Concepto/Fecha/Importe/Saldo` export and Polish mBank statements with metadata and Windows-1250 text, while preserving the generic table format as a fallback.
 - There are no receipt photos, budgets, exports, push notifications, or password-reset screen yet.
 - EAS and App Store credentials must be configured by the repository owner.
 

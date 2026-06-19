@@ -21,7 +21,14 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "Household Expenses",
+      "shortName": "Expenses",
+      "description": "A private shared expense tracker for households.",
+      "display": "standalone",
+      "themeColor": "#315C4C",
+      "backgroundColor": "#F6F7F2",
+      "output": "single"
     },
     "plugins": [
       "@react-native-community/datetimepicker"

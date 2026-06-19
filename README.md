@@ -2,6 +2,8 @@
 
 A calm, practical shared expense tracker for a household. It runs in Expo Go on iPhone, synchronizes data through Firebase, and keeps each household's financial data private.
 
+The same codebase also runs as a web app on GitHub Pages. See [docs/web-deployment.md](docs/web-deployment.md).
+
 ## What works in v1
 
 - Email/password registration and login
@@ -104,6 +106,18 @@ npx expo start --tunnel
 ```
 
 See [docs/iphone-testing.md](docs/iphone-testing.md) for two-account testing and EAS Build instructions.
+
+## Use as a website
+
+GitHub Pages can host the browser build at:
+
+```text
+https://kuabnad.github.io/household-expenses-app/
+```
+
+Login is handled by Firebase Authentication—not GitHub—and private data remains protected by Firestore rules. Add the Firebase configuration as GitHub Actions repository variables and enable Pages with GitHub Actions.
+
+See [docs/web-deployment.md](docs/web-deployment.md) for the complete deployment instructions.
 
 ## Household invitation flow
 

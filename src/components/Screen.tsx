@@ -69,11 +69,14 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   content: {
+    alignSelf: 'center',
     flex: 1,
     gap: spacing.md,
+    maxWidth: 760,
     paddingBottom: spacing.xl,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
+    width: '100%',
   },
   header: {
     alignItems: 'flex-start',

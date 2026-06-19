@@ -1,4 +1,10 @@
-import type { Category, Currency, Expense, HouseholdMember } from '../types/models';
+import type {
+  Category,
+  Currency,
+  Expense,
+  HouseholdMember,
+  MonthlyIncome,
+} from '../types/models';
 
 export interface SummaryLine {
   id: string;
@@ -15,6 +21,17 @@ export interface MonthSpendingSummary {
   intensity: number;
   hasExpenses: boolean;
   isFuture: boolean;
+}
+
+export interface MemberFinanceSummary {
+  userId: string;
+  member: HouseholdMember;
+  lines: Array<{
+    currency: Currency;
+    income: number;
+    expenses: number;
+    savings: number;
+  }>;
 }
 
 export function expensesForMonth(expenses: Expense[], selectedMonth: string) {
@@ -108,6 +125,38 @@ export function totalsByCurrency(expenses: Expense[]) {
     totals[expense.currency] = (totals[expense.currency] ?? 0) + expense.amount;
     return totals;
   }, {});
+}
+
+export function monthlyFinancesByMember(
+  expenses: Expense[],
+  incomes: MonthlyIncome[],
+  members: Record<string, HouseholdMember>,
+  month: string,
+): MemberFinanceSummary[] {
+  return Object.entries(members).map(([userId, member]) => {
+    const income = incomes.find((item) => item.month === month && item.userId === userId);
+    const expensesByCurrency = totalsByCurrency(
+      expenses.filter((expense) => expense.paidByUserId === userId),
+    );
+    const currencies = new Set<Currency>([
+      ...(Object.keys(expensesByCurrency) as Currency[]),
+      ...(income ? [income.currency] : []),
+    ]);
+    return {
+      userId,
+      member,
+      lines: [...currencies].map((currency) => {
+        const monthlyIncome = income?.currency === currency ? income.amount : 0;
+        const spent = expensesByCurrency[currency] ?? 0;
+        return {
+          currency,
+          income: monthlyIncome,
+          expenses: spent,
+          savings: monthlyIncome - spent,
+        };
+      }),
+    };
+  });
 }
 
 export function spendingByCategory(expenses: Expense[], categories: Category[]) {

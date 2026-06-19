@@ -16,6 +16,9 @@ Use two distinct email addresses. For the best sync test, use two devices.
 - [ ] Select months in the annual color calendar and confirm the monthly summary changes.
 - [ ] Confirm heavier-spending months appear redder and lighter months bluer.
 - [ ] Confirm the year-to-date category bars include all elapsed months.
+- [ ] Enter account A's monthly income and verify income, expenses, and savings.
+- [ ] Enter account B's monthly income and verify both people see the shared comparison.
+- [ ] Change month and confirm each month stores its own income values.
 - [ ] Share the invite code from Settings.
 - [ ] Register account B and join the household with the invite code.
 - [ ] Verify account B sees account A's existing expense.

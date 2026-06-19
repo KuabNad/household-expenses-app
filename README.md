@@ -181,14 +181,15 @@ The manual end-to-end checklist is in [docs/testing-checklist.md](docs/testing-c
 - There is no currency conversion; each currency is summarized separately to avoid misleading totals.
 - Recurring expenses support monthly and yearly schedules. They are projected into future monthly views; v1.2 does not create separate Firestore records for every occurrence.
 - The dashboard includes a clickable annual spending heatmap and year-to-date category bars.
+- Each household member can save their own monthly income and see income, expenses paid, and calculated savings for every member.
 - There are no receipt photos, budgets, exports, push notifications, or password-reset screen yet.
 - EAS and App Store credentials must be configured by the repository owner.
 
 ## Updating Firestore rules
 
-Version 1.2.0 allows household members to rename default categories, safely
+Version 1.4.0 allows household members to rename default categories, safely
 resolve expenses when deleting a custom category, and save recurring-expense
-settings. Replace the
+and monthly-income settings. Replace the
 rules in Firebase Console with the current [`firebase.rules`](firebase.rules)
 file and publish them before using that feature.
 

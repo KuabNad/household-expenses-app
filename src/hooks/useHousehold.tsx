@@ -24,13 +24,21 @@ import {
 } from 'react';
 import { DEFAULT_CATEGORIES, DEFAULT_CATEGORY_TRANSLATIONS } from '../utils/categories';
 import { db } from '../services/firebase';
-import type { Category, Expense, ExpenseInput, Household } from '../types/models';
+import type {
+  Category,
+  Currency,
+  Expense,
+  ExpenseInput,
+  Household,
+  MonthlyIncome,
+} from '../types/models';
 import { useAuth } from './useAuth';
 
 interface HouseholdContextValue {
   household: Household | null;
   categories: Category[];
   expenses: Expense[];
+  monthlyIncomes: MonthlyIncome[];
   loading: boolean;
   syncError: string | null;
   createHousehold: (name: string) => Promise<void>;
@@ -38,6 +46,7 @@ interface HouseholdContextValue {
   addExpense: (input: ExpenseInput) => Promise<void>;
   updateExpense: (id: string, input: ExpenseInput) => Promise<void>;
   deleteExpense: (expense: Expense) => Promise<void>;
+  saveMonthlyIncome: (month: string, amount: number, currency: Currency) => Promise<void>;
   addCategory: (name: string, color: string) => Promise<void>;
   updateCategory: (category: Category, name: string, color: string) => Promise<void>;
   deleteCategory: (
@@ -60,6 +69,7 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
   const [household, setHousehold] = useState<Household | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [monthlyIncomes, setMonthlyIncomes] = useState<MonthlyIncome[]>([]);
   const [loading, setLoading] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
 
@@ -68,6 +78,7 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
       setHousehold(null);
       setCategories([]);
       setExpenses([]);
+      setMonthlyIncomes([]);
       setLoading(false);
       setSyncError(null);
       return;
@@ -119,10 +130,20 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
       onError,
     );
 
+    const incomeUnsubscribe = onSnapshot(
+      collection(db, 'households', householdId, 'monthlyIncomes'),
+      (snapshot) => {
+        setMonthlyIncomes(snapshot.docs.map((item) => item.data() as MonthlyIncome));
+        setSyncError(null);
+      },
+      onError,
+    );
+
     return () => {
       householdUnsubscribe();
       categoryUnsubscribe();
       expenseUnsubscribe();
+      incomeUnsubscribe();
     };
   }, [profile?.householdId, user]);
 
@@ -267,6 +288,37 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
     [requireHousehold],
   );
 
+  const saveMonthlyIncome = useCallback(
+    async (month: string, amount: number, currency: Currency) => {
+      const session = requireHousehold();
+      if (!Number.isFinite(amount) || amount < 0) {
+        throw new Error('Introduce un ingreso válido.');
+      }
+      const incomeRef = doc(
+        db,
+        'households',
+        session.householdId,
+        'monthlyIncomes',
+        `${month}_${session.user.uid}`,
+      );
+      await setDoc(
+        incomeRef,
+        {
+          id: incomeRef.id,
+          householdId: session.householdId,
+          userId: session.user.uid,
+          month,
+          amount: Math.round(amount * 100) / 100,
+          currency,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
+    },
+    [requireHousehold],
+  );
+
   const addCategory = useCallback(
     async (name: string, color: string) => {
       const session = requireHousehold();
@@ -362,6 +414,7 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
       household,
       categories,
       expenses,
+      monthlyIncomes,
       loading,
       syncError,
       createHousehold,
@@ -369,6 +422,7 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
       addExpense,
       updateExpense,
       deleteExpense,
+      saveMonthlyIncome,
       addCategory,
       updateCategory,
       deleteCategory,
@@ -381,10 +435,12 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
       deleteCategory,
       deleteExpense,
       expenses,
+      monthlyIncomes,
       household,
       joinHousehold,
       loading,
       syncError,
+      saveMonthlyIncome,
       updateCategory,
       updateExpense,
     ],

@@ -135,6 +135,19 @@ service cloud.firestore {
         allow delete: if isMember(householdId)
           && resource.data.isDefault == false;
       }
+
+      match /monthlyIncomes/{incomeId} {
+        allow read: if isMember(householdId);
+        allow create, update: if isMember(householdId)
+          && request.resource.data.householdId == householdId
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.id == incomeId
+          && incomeId == request.resource.data.month + "_" + request.auth.uid
+          && request.resource.data.amount is number
+          && request.resource.data.amount >= 0;
+        allow delete: if isMember(householdId)
+          && resource.data.userId == request.auth.uid;
+      }
     }
   }
 }

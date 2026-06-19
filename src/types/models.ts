@@ -67,3 +67,14 @@ export interface ExpenseInput {
   isRecurring: boolean;
   recurrenceFrequency?: RecurrenceFrequency;
 }
+
+export interface MonthlyIncome {
+  id: string;
+  householdId: string;
+  userId: string;
+  month: string;
+  amount: number;
+  currency: Currency;
+  createdAt: Timestamp | null;
+  updatedAt: Timestamp | null;
+}

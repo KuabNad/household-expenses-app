@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { Category, Expense, HouseholdMember } from '../types/models';
+import type { Category, Expense, HouseholdMember, MonthlyIncome } from '../types/models';
 import {
   expensesForMonth,
   expensesForYearToDate,
   monthlySpendingForYear,
+  monthlyFinancesByMember,
   spendingByCategory,
   spendingByPayer,
   totalsByCurrency,
@@ -71,6 +72,29 @@ const members: Record<string, HouseholdMember> = {
   u1: { email: 'one@example.com', displayName: 'One', joinedAt: null },
   u2: { email: 'two@example.com', displayName: 'Two', joinedAt: null },
 };
+
+const incomes: MonthlyIncome[] = [
+  {
+    id: '2026-06_u1',
+    householdId: 'h1',
+    userId: 'u1',
+    month: '2026-06',
+    amount: 2000,
+    currency: 'EUR',
+    createdAt: null,
+    updatedAt: null,
+  },
+  {
+    id: '2026-06_u2',
+    householdId: 'h1',
+    userId: 'u2',
+    month: '2026-06',
+    amount: 1500,
+    currency: 'EUR',
+    createdAt: null,
+    updatedAt: null,
+  },
+];
 
 describe('summary helpers', () => {
   it('filters expenses by calendar month', () => {
@@ -147,5 +171,19 @@ describe('summary helpers', () => {
       '2026-06-12',
       '2026-07-02',
     ]);
+  });
+
+  it('calculates monthly income, expenses and savings for every member', () => {
+    const june = expensesForMonth(expenses, '2026-06');
+    const finances = monthlyFinancesByMember(june, incomes, members, '2026-06');
+
+    expect(finances[0]).toMatchObject({
+      userId: 'u1',
+      lines: [{ currency: 'EUR', income: 2000, expenses: 42.5, savings: 1957.5 }],
+    });
+    expect(finances[1]).toMatchObject({
+      userId: 'u2',
+      lines: [{ currency: 'EUR', income: 1500, expenses: 10, savings: 1490 }],
+    });
   });
 });

@@ -4,11 +4,13 @@ import { EmptyState } from '../components/EmptyState';
 import { ExpenseRow } from '../components/ExpenseRow';
 import { InteractivePieChart } from '../components/InteractivePieChart';
 import { MonthSelector } from '../components/MonthSelector';
+import { MonthlyMemberFinances } from '../components/MonthlyMemberFinances';
 import { Notice } from '../components/Notice';
 import { Screen } from '../components/Screen';
 import { SummaryBars } from '../components/SummaryBars';
 import { YearSpendingCalendar } from '../components/YearSpendingCalendar';
 import { useHousehold } from '../hooks/useHousehold';
+import { useAuth } from '../hooks/useAuth';
 import { formatMoney, monthKey, toDateInput } from '../utils/format';
 import {
   expensesForMonth,
@@ -21,7 +23,15 @@ import {
 import { colors, radius, spacing } from '../utils/theme';
 
 export function DashboardScreen() {
-  const { household, categories, expenses, syncError } = useHousehold();
+  const { user } = useAuth();
+  const {
+    household,
+    categories,
+    expenses,
+    monthlyIncomes,
+    saveMonthlyIncome,
+    syncError,
+  } = useHousehold();
   const today = useMemo(() => new Date(), []);
   const currentYear = today.getFullYear();
   const todayKey = toDateInput(today);
@@ -107,6 +117,16 @@ export function DashboardScreen() {
           Los totales se muestran por separado cuando se utilizan varias monedas.
         </Text>
       </View>
+      {household ? (
+        <MonthlyMemberFinances
+          currentUserId={user?.uid}
+          expenses={monthlyExpenses}
+          incomes={monthlyIncomes}
+          members={household.members}
+          month={selectedMonth}
+          onSave={(amount, currency) => saveMonthlyIncome(selectedMonth, amount, currency)}
+        />
+      ) : null}
 
       {monthlyExpenses.length === 0 ? (
         <EmptyState

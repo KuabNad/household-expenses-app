@@ -31,6 +31,7 @@ import type {
   ExpenseInput,
   Household,
   MonthlyIncome,
+  SpreadsheetTransactionImport,
 } from '../types/models';
 import { useAuth } from './useAuth';
 
@@ -47,6 +48,9 @@ interface HouseholdContextValue {
   updateExpense: (id: string, input: ExpenseInput) => Promise<void>;
   deleteExpense: (expense: Expense) => Promise<void>;
   saveMonthlyIncome: (month: string, amount: number, currency: Currency) => Promise<void>;
+  importSpreadsheetTransactions: (
+    transactions: SpreadsheetTransactionImport[],
+  ) => Promise<{ expenses: number; incomeMonths: number }>;
   addCategory: (name: string, color: string) => Promise<void>;
   updateCategory: (category: Category, name: string, color: string) => Promise<void>;
   deleteCategory: (
@@ -294,17 +298,32 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
       if (!Number.isFinite(amount) || amount < 0) {
         throw new Error('Introduce un ingreso válido.');
       }
+      const existingSameCurrency = monthlyIncomes.find(
+        (income) =>
+          income.month === month &&
+          income.userId === session.user.uid &&
+          income.currency === currency,
+      );
+      const legacyIncome = monthlyIncomes.find(
+        (income) =>
+          income.id === `${month}_${session.user.uid}` &&
+          income.userId === session.user.uid,
+      );
+      const incomeId =
+        existingSameCurrency?.id ??
+        legacyIncome?.id ??
+        `${month}_${session.user.uid}_${currency}`;
       const incomeRef = doc(
         db,
         'households',
         session.householdId,
         'monthlyIncomes',
-        `${month}_${session.user.uid}`,
+        incomeId,
       );
       await setDoc(
         incomeRef,
         {
-          id: incomeRef.id,
+          id: incomeId,
           householdId: session.householdId,
           userId: session.user.uid,
           month,
@@ -316,7 +335,98 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
         { merge: true },
       );
     },
-    [requireHousehold],
+    [monthlyIncomes, requireHousehold],
+  );
+
+  const importSpreadsheetTransactions = useCallback(
+    async (transactions: SpreadsheetTransactionImport[]) => {
+      const session = requireHousehold();
+      if (!transactions.length) throw new Error('No hay movimientos seleccionados.');
+
+      const incomeGroups = new Map<
+        string,
+        { month: string; currency: Currency; amount: number }
+      >();
+      const expenseRows = transactions.filter(
+        (transaction) => transaction.type === 'expense',
+      );
+      transactions
+        .filter((transaction) => transaction.type === 'income')
+        .forEach((transaction) => {
+          const month = transaction.date.slice(0, 7);
+          const key = `${month}-${transaction.currency}`;
+          const current = incomeGroups.get(key);
+          incomeGroups.set(key, {
+            month,
+            currency: transaction.currency,
+            amount: (current?.amount ?? 0) + transaction.amount,
+          });
+        });
+
+      if (expenseRows.length + incomeGroups.size > 450) {
+        throw new Error('La tabla es demasiado grande. Importa como máximo 450 elementos a la vez.');
+      }
+
+      const batch = writeBatch(db);
+      expenseRows.forEach((transaction) => {
+        const expenseRef = doc(
+          collection(db, 'households', session.householdId, 'expenses'),
+        );
+        batch.set(expenseRef, {
+          id: expenseRef.id,
+          householdId: session.householdId,
+          amount: transaction.amount,
+          currency: transaction.currency,
+          date: transaction.date,
+          categoryId: transaction.categoryId,
+          description: transaction.description.trim(),
+          paidByUserId: session.user.uid,
+          paymentMethod: 'Importación bancaria',
+          isRecurring: false,
+          importFingerprint: transaction.fingerprint,
+          importSource: 'spreadsheet',
+          createdBy: session.user.uid,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      });
+
+      incomeGroups.forEach(({ month, currency, amount }) => {
+        const existing = monthlyIncomes.find(
+          (income) =>
+            income.month === month &&
+            income.userId === session.user.uid &&
+            income.currency === currency,
+        );
+        const incomeId =
+          existing?.id ?? `${month}_${session.user.uid}_${currency}`;
+        const incomeRef = doc(
+          db,
+          'households',
+          session.householdId,
+          'monthlyIncomes',
+          incomeId,
+        );
+        batch.set(
+          incomeRef,
+          {
+            id: incomeId,
+            householdId: session.householdId,
+            userId: session.user.uid,
+            month,
+            amount: Math.round(amount * 100) / 100,
+            currency,
+            ...(existing ? {} : { createdAt: serverTimestamp() }),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        );
+      });
+
+      await batch.commit();
+      return { expenses: expenseRows.length, incomeMonths: incomeGroups.size };
+    },
+    [monthlyIncomes, requireHousehold],
   );
 
   const addCategory = useCallback(
@@ -423,6 +533,7 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
       updateExpense,
       deleteExpense,
       saveMonthlyIncome,
+      importSpreadsheetTransactions,
       addCategory,
       updateCategory,
       deleteCategory,
@@ -441,6 +552,7 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
       loading,
       syncError,
       saveMonthlyIncome,
+      importSpreadsheetTransactions,
       updateCategory,
       updateExpense,
     ],

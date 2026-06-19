@@ -10,6 +10,10 @@ import {
   totalsByCurrency,
 } from './summary';
 import { isValidDateInput } from './format';
+import {
+  existingExpenseFingerprints,
+  parseSpreadsheetRows,
+} from './spreadsheetImport';
 
 const expenses: Expense[] = [
   {
@@ -185,5 +189,53 @@ describe('summary helpers', () => {
       userId: 'u2',
       lines: [{ currency: 'EUR', income: 1500, expenses: 10, savings: 1490 }],
     });
+  });
+
+  it('parses spreadsheet income and expenses with European numbers and dates', () => {
+    const result = parseSpreadsheetRows(
+      [
+        ['Fecha', 'Descripción', 'Importe', 'Moneda', 'Tipo', 'Categoría'],
+        ['01/06/2026', 'Supermercado', '-1.234,56', 'EUR', 'Gasto', 'Food'],
+        ['03/06/2026', 'Nómina', '2.500,00', 'EUR', 'Ingreso', ''],
+      ],
+      'u1',
+    );
+
+    expect(result.errors).toEqual([]);
+    expect(result.transactions).toMatchObject([
+      {
+        type: 'expense',
+        date: '2026-06-01',
+        description: 'Supermercado',
+        amount: 1234.56,
+        currency: 'EUR',
+        categoryName: 'Food',
+      },
+      {
+        type: 'income',
+        date: '2026-06-03',
+        description: 'Nómina',
+        amount: 2500,
+        currency: 'EUR',
+      },
+    ]);
+  });
+
+  it('supports debit and credit columns and detects existing expenses', () => {
+    const result = parseSpreadsheetRows(
+      [
+        ['Date', 'Description', 'Debit', 'Credit', 'Currency'],
+        ['12/06/2026', 'Lunch', '10.00', '', 'EUR'],
+        ['15/06/2026', 'Salary', '', '1500.00', 'EUR'],
+      ],
+      'u2',
+    );
+
+    expect(result.transactions.map((item) => item.type)).toEqual(['expense', 'income']);
+    expect(
+      existingExpenseFingerprints(expenses, 'u2').has(
+        result.transactions[0].fingerprint,
+      ),
+    ).toBe(true);
   });
 });

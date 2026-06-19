@@ -5,6 +5,8 @@ import { EmptyState } from '../components/EmptyState';
 import { ExpenseForm } from '../components/ExpenseForm';
 import { Notice } from '../components/Notice';
 import { Screen } from '../components/Screen';
+import { SpreadsheetImport } from '../components/SpreadsheetImport';
+import { useAuth } from '../hooks/useAuth';
 import { useHousehold } from '../hooks/useHousehold';
 import { friendlyError } from '../services/errors';
 import type { MainTabParamList } from '../types/navigation';
@@ -13,7 +15,15 @@ import type { ExpenseInput } from '../types/models';
 type Props = BottomTabScreenProps<MainTabParamList, 'AddExpense'>;
 
 export function AddExpenseScreen({ navigation }: Props) {
-  const { household, categories, addExpense, syncError } = useHousehold();
+  const { user } = useAuth();
+  const {
+    household,
+    categories,
+    expenses,
+    addExpense,
+    importSpreadsheetTransactions,
+    syncError,
+  } = useHousehold();
   const [loading, setLoading] = useState(false);
   const [formKey, setFormKey] = useState(0);
 
@@ -45,14 +55,24 @@ export function AddExpenseScreen({ navigation }: Props) {
           title="Todavía no hay categorías"
         />
       ) : (
-        <ExpenseForm
-          categories={categories}
-          household={household}
-          key={formKey}
-          loading={loading}
-          onSubmit={submit}
-          submitLabel="Guardar gasto"
-        />
+        <>
+          {user ? (
+            <SpreadsheetImport
+              categories={categories}
+              currentUserId={user.uid}
+              expenses={expenses}
+              onImport={importSpreadsheetTransactions}
+            />
+          ) : null}
+          <ExpenseForm
+            categories={categories}
+            household={household}
+            key={formKey}
+            loading={loading}
+            onSubmit={submit}
+            submitLabel="Guardar gasto"
+          />
+        </>
       )}
     </Screen>
   );

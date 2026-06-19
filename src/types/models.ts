@@ -40,6 +40,8 @@ export interface Expense {
   isRecurring?: boolean;
   recurrenceFrequency?: RecurrenceFrequency;
   isProjected?: boolean;
+  importFingerprint?: string;
+  importSource?: 'spreadsheet';
   createdBy: string;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
@@ -78,3 +80,26 @@ export interface MonthlyIncome {
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 }
+
+export interface SpreadsheetExpenseImport {
+  type: 'expense';
+  date: string;
+  amount: number;
+  currency: Currency;
+  description: string;
+  categoryId: string;
+  fingerprint: string;
+}
+
+export interface SpreadsheetIncomeImport {
+  type: 'income';
+  date: string;
+  amount: number;
+  currency: Currency;
+  description: string;
+  fingerprint: string;
+}
+
+export type SpreadsheetTransactionImport =
+  | SpreadsheetExpenseImport
+  | SpreadsheetIncomeImport;

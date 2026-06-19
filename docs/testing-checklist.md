@@ -19,6 +19,11 @@ Use two distinct email addresses. For the best sync test, use two devices.
 - [ ] Enter account A's monthly income and verify income, expenses, and savings.
 - [ ] Enter account B's monthly income and verify both people see the shared comparison.
 - [ ] Change month and confirm each month stores its own income values.
+- [ ] Import `docs/import-template.csv` from Añadir and review every detected row.
+- [ ] Confirm expense rows use the selected category and income rows update monthly income.
+- [ ] Import the same table again and confirm likely duplicate expenses are unselected.
+- [ ] Import an `.xlsx` file with the same headers and confirm it produces the same preview.
+- [ ] Cancel an import and confirm no transactions are written.
 - [ ] Share the invite code from Settings.
 - [ ] Register account B and join the household with the invite code.
 - [ ] Verify account B sees account A's existing expense.

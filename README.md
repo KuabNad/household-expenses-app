@@ -145,11 +145,15 @@ See [docs/web-deployment.md](docs/web-deployment.md) for the complete deployment
 
 ### Expense
 
-`id`, `householdId`, `amount`, `currency`, `date`, `categoryId`, `description`, `paidByUserId`, `paymentMethod`, `createdBy`, `createdAt`, `updatedAt`
+`id`, `householdId`, `amount`, `currency`, `date`, `categoryId`, `description`, `paidByUserId`, `paymentMethod`, `importFingerprint`, `importSource`, `createdBy`, `createdAt`, `updatedAt`
 
 ### Category
 
 `id`, `householdId`, `name`, `icon`, `color`, `isDefault`, `createdBy`, `createdAt`
+
+### Monthly income
+
+`id`, `householdId`, `userId`, `month`, `amount`, `currency`, `createdAt`, `updatedAt`
 
 ## EAS Build for iPhone later
 
@@ -172,6 +176,7 @@ npm test
 ```
 
 The manual end-to-end checklist is in [docs/testing-checklist.md](docs/testing-checklist.md).
+Use [docs/import-template.csv](docs/import-template.csv) as a spreadsheet-import example.
 
 ## Known limitations / TODO
 
@@ -182,14 +187,15 @@ The manual end-to-end checklist is in [docs/testing-checklist.md](docs/testing-c
 - Recurring expenses support monthly and yearly schedules. They are projected into future monthly views; v1.2 does not create separate Firestore records for every occurrence.
 - The dashboard includes a clickable annual spending heatmap and year-to-date category bars.
 - Each household member can save their own monthly income and see income, expenses paid, and calculated savings for every member.
+- Each member can parse a CSV or Excel `.xlsx` bank table in Añadir, review the detected rows, assign categories, and import only selected transactions. The source file is not uploaded or retained.
 - There are no receipt photos, budgets, exports, push notifications, or password-reset screen yet.
 - EAS and App Store credentials must be configured by the repository owner.
 
 ## Updating Firestore rules
 
-Version 1.4.0 allows household members to rename default categories, safely
+Version 1.5.0 allows household members to rename default categories, safely
 resolve expenses when deleting a custom category, and save recurring-expense
-and monthly-income settings. Replace the
+and monthly-income settings. It also permits spreadsheet import metadata. Replace the
 rules in Firebase Console with the current [`firebase.rules`](firebase.rules)
 file and publish them before using that feature.
 

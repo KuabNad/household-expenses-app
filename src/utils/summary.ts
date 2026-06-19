@@ -134,19 +134,23 @@ export function monthlyFinancesByMember(
   month: string,
 ): MemberFinanceSummary[] {
   return Object.entries(members).map(([userId, member]) => {
-    const income = incomes.find((item) => item.month === month && item.userId === userId);
+    const memberIncomes = incomes.filter(
+      (item) => item.month === month && item.userId === userId,
+    );
     const expensesByCurrency = totalsByCurrency(
       expenses.filter((expense) => expense.paidByUserId === userId),
     );
     const currencies = new Set<Currency>([
       ...(Object.keys(expensesByCurrency) as Currency[]),
-      ...(income ? [income.currency] : []),
+      ...memberIncomes.map((income) => income.currency),
     ]);
     return {
       userId,
       member,
       lines: [...currencies].map((currency) => {
-        const monthlyIncome = income?.currency === currency ? income.amount : 0;
+        const monthlyIncome = memberIncomes
+          .filter((income) => income.currency === currency)
+          .reduce((total, income) => total + income.amount, 0);
         const spent = expensesByCurrency[currency] ?? 0;
         return {
           currency,

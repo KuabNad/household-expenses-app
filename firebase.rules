@@ -142,7 +142,10 @@ service cloud.firestore {
           && request.resource.data.householdId == householdId
           && request.resource.data.userId == request.auth.uid
           && request.resource.data.id == incomeId
-          && incomeId == request.resource.data.month + "_" + request.auth.uid
+          && (
+            incomeId == request.resource.data.month + "_" + request.auth.uid
+            || incomeId == request.resource.data.month + "_" + request.auth.uid + "_" + request.resource.data.currency
+          )
           && request.resource.data.amount is number
           && request.resource.data.amount >= 0;
         allow delete: if isMember(householdId)

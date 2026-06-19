@@ -47,7 +47,7 @@ export function ExpenseListScreen({ navigation }: Props) {
               key={expense.id}
               member={household?.members[expense.paidByUserId]}
               onPress={
-                expense.createdBy === user?.uid
+                expense.createdBy === user?.uid && !expense.isProjected
                   ? () => navigation.navigate('EditExpense', { expense })
                   : undefined
               }

@@ -36,6 +36,11 @@ export function ExpenseRow({
           {category?.name ?? 'Categoría eliminada'} · {formatDate(expense.date)}
         </Text>
         <Text style={styles.meta}>Pagado por {member?.displayName ?? 'Miembro desconocido'}</Text>
+        {expense.isRecurring ? (
+          <Text style={styles.recurring}>
+            {expense.recurrenceFrequency === 'yearly' ? 'Recurrente anual' : 'Recurrente mensual'}
+          </Text>
+        ) : null}
       </View>
       <Text style={styles.amount}>{formatMoney(expense.amount, expense.currency)}</Text>
     </Pressable>
@@ -62,5 +67,6 @@ const styles = StyleSheet.create({
   details: { flex: 1, gap: 2 },
   description: { color: colors.text, fontSize: 15, fontWeight: '700' },
   meta: { color: colors.muted, fontSize: 12 },
+  recurring: { color: colors.primary, fontSize: 11, fontWeight: '800' },
   amount: { color: colors.text, fontSize: 15, fontWeight: '800' },
 });

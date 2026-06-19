@@ -2,6 +2,7 @@ import {
   arrayUnion,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   onSnapshot,
@@ -220,10 +221,14 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
     async (input: ExpenseInput) => {
       const session = requireHousehold();
       const expenseRef = doc(collection(db, 'households', session.householdId, 'expenses'));
+      const { recurrenceFrequency, ...expenseInput } = input;
       await setDoc(expenseRef, {
         id: expenseRef.id,
         householdId: session.householdId,
-        ...input,
+        ...expenseInput,
+        ...(input.isRecurring
+          ? { recurrenceFrequency: recurrenceFrequency ?? 'monthly' }
+          : {}),
         paymentMethod: input.paymentMethod?.trim() ?? '',
         description: input.description.trim(),
         createdBy: session.user.uid,
@@ -239,6 +244,9 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
       const session = requireHousehold();
       await updateDoc(doc(db, 'households', session.householdId, 'expenses', id), {
         ...input,
+        recurrenceFrequency: input.isRecurring
+          ? input.recurrenceFrequency ?? 'monthly'
+          : deleteField(),
         paymentMethod: input.paymentMethod?.trim() ?? '',
         description: input.description.trim(),
         updatedAt: serverTimestamp(),
@@ -254,6 +262,7 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
         throw new Error('Solo la persona que añadió este gasto puede eliminarlo.');
       }
       await deleteDoc(doc(db, 'households', session.householdId, 'expenses', expense.id));
+      setExpenses((current) => current.filter((item) => item.id !== expense.id));
     },
     [requireHousehold],
   );

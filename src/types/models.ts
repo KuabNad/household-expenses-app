@@ -1,6 +1,7 @@
 import type { Timestamp } from 'firebase/firestore';
 
 export type Currency = 'EUR' | 'USD' | 'GBP' | 'PLN' | 'CAD' | 'AUD';
+export type RecurrenceFrequency = 'monthly' | 'yearly';
 
 export interface UserProfile {
   id: string;
@@ -36,6 +37,9 @@ export interface Expense {
   description: string;
   paidByUserId: string;
   paymentMethod?: string;
+  isRecurring?: boolean;
+  recurrenceFrequency?: RecurrenceFrequency;
+  isProjected?: boolean;
   createdBy: string;
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
@@ -60,4 +64,6 @@ export interface ExpenseInput {
   description: string;
   paidByUserId: string;
   paymentMethod?: string;
+  isRecurring: boolean;
+  recurrenceFrequency?: RecurrenceFrequency;
 }

@@ -97,6 +97,8 @@ service cloud.firestore {
                 'description',
                 'paidByUserId',
                 'paymentMethod',
+                'isRecurring',
+                'recurrenceFrequency',
                 'updatedAt'
               ])
               && request.resource.data.amount is number

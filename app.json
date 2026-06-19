@@ -2,7 +2,7 @@
   "expo": {
     "name": "Gastos del hogar",
     "slug": "household-expenses-app",
-    "version": "1.1.1",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

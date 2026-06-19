@@ -1,13 +1,19 @@
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import type { Category, Currency, ExpenseInput, Household } from '../types/models';
+import { useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import type {
+  Category,
+  Currency,
+  ExpenseInput,
+  Household,
+  RecurrenceFrequency,
+} from '../types/models';
 import { useAuth } from '../hooks/useAuth';
 import { isValidDateInput, toDateInput } from '../utils/format';
 import { colors, radius, spacing } from '../utils/theme';
 import { AppButton } from './AppButton';
 import { AppInput } from './AppInput';
+import { MiniCalendar } from './MiniCalendar';
 
 const CURRENCIES: Currency[] = ['EUR', 'USD', 'GBP', 'PLN', 'CAD', 'AUD'];
 
@@ -53,7 +59,6 @@ export function ExpenseForm({
   onSubmit,
 }: ExpenseFormProps) {
   const { user } = useAuth();
-  const webDateRef = useRef<TextInput>(null);
   const [amount, setAmount] = useState(initial ? String(initial.amount) : '');
   const [currency, setCurrency] = useState<Currency>(initial?.currency ?? 'EUR');
   const [date, setDate] = useState(initial?.date ?? toDateInput(new Date()));
@@ -64,6 +69,10 @@ export function ExpenseForm({
     initial?.paidByUserId ?? user?.uid ?? household.createdBy,
   );
   const [paymentMethod, setPaymentMethod] = useState(initial?.paymentMethod ?? '');
+  const [isRecurring, setIsRecurring] = useState(initial?.isRecurring ?? false);
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState<RecurrenceFrequency>(
+    initial?.recurrenceFrequency ?? 'monthly',
+  );
   const [error, setError] = useState('');
 
   const members = useMemo(() => Object.entries(household.members), [household.members]);
@@ -95,6 +104,8 @@ export function ExpenseForm({
       description,
       paidByUserId,
       paymentMethod,
+      isRecurring,
+      recurrenceFrequency: isRecurring ? recurrenceFrequency : undefined,
     });
   };
 
@@ -128,45 +139,15 @@ export function ExpenseForm({
 
       <View style={styles.field}>
         <Text style={styles.label}>Fecha</Text>
-        {Platform.OS === 'web' ? (
-          <View style={styles.webDateControl}>
-            <TextInput
-              accessibilityLabel="Fecha"
-              onChangeText={setDate}
-              ref={webDateRef}
-              style={styles.webDateInput}
-              value={date}
-              {...({ type: 'date', max: toDateInput(new Date()) } as object)}
-            />
-            <Pressable
-              accessibilityLabel="Abrir calendario"
-              hitSlop={8}
-              onPress={() => {
-                const input = webDateRef.current as TextInput & { showPicker?: () => void };
-                input?.focus();
-                input?.showPicker?.();
-              }}
-              style={styles.calendarButton}
-            >
-              <Ionicons color={colors.primary} name="calendar-outline" size={23} />
-            </Pressable>
-          </View>
-        ) : (
-          <Pressable onPress={() => setShowDate((value) => !value)} style={styles.dateButton}>
-            <Text style={styles.dateText}>{date}</Text>
-            <Ionicons color={colors.primary} name="calendar-outline" size={23} />
-          </Pressable>
-        )}
-        {showDate && Platform.OS !== 'web' ? (
-          <DateTimePicker
-            display={Platform.OS === 'ios' ? 'inline' : 'default'}
-            maximumDate={new Date()}
-            mode="date"
-            onChange={(_, selected) => {
-              if (Platform.OS !== 'ios') setShowDate(false);
-              if (selected) setDate(toDateInput(selected));
-            }}
-            value={new Date(`${date}T12:00:00`)}
+        <Pressable onPress={() => setShowDate((value) => !value)} style={styles.dateButton}>
+          <Text style={styles.dateText}>{date}</Text>
+          <Ionicons color={colors.primary} name="calendar-outline" size={23} />
+        </Pressable>
+        {showDate ? (
+          <MiniCalendar
+            onChange={setDate}
+            onClose={() => setShowDate(false)}
+            value={date}
           />
         ) : null}
       </View>
@@ -215,6 +196,42 @@ export function ExpenseForm({
         value={paymentMethod}
       />
 
+      <View style={styles.recurringCard}>
+        <View style={styles.recurringHeading}>
+          <View style={styles.recurringText}>
+            <Text style={styles.recurringTitle}>Gasto recurrente / suscripción</Text>
+            <Text style={styles.recurringDescription}>
+              Se repetirá automáticamente en los resúmenes futuros.
+            </Text>
+          </View>
+          <Pressable
+            accessibilityRole="switch"
+            accessibilityState={{ checked: isRecurring }}
+            onPress={() => setIsRecurring((value) => !value)}
+            style={[styles.switchTrack, isRecurring && styles.switchTrackActive]}
+          >
+            <View style={[styles.switchThumb, isRecurring && styles.switchThumbActive]} />
+          </Pressable>
+        </View>
+        {isRecurring ? (
+          <View style={styles.field}>
+            <Text style={styles.label}>Frecuencia</Text>
+            <View style={styles.choices}>
+              <Choice
+                label="Mensual"
+                onPress={() => setRecurrenceFrequency('monthly')}
+                selected={recurrenceFrequency === 'monthly'}
+              />
+              <Choice
+                label="Anual"
+                onPress={() => setRecurrenceFrequency('yearly')}
+                selected={recurrenceFrequency === 'yearly'}
+              />
+            </View>
+          </View>
+        ) : null}
+      </View>
+
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <AppButton label={submitLabel} loading={loading} onPress={submit} />
     </View>
@@ -251,32 +268,34 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 16,
   },
-  webDateControl: {
-    alignItems: 'center',
+  dateText: { color: colors.text, fontSize: 16 },
+  recurringCard: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    flexDirection: 'row',
-    minHeight: 50,
-    overflow: 'hidden',
+    gap: spacing.md,
+    padding: spacing.md,
   },
-  webDateInput: {
-    borderWidth: 0,
-    color: colors.text,
-    flex: 1,
-    fontSize: 16,
-    minHeight: 48,
-    paddingHorizontal: spacing.md,
-  },
-  calendarButton: {
-    alignItems: 'center',
-    alignSelf: 'stretch',
-    borderLeftColor: colors.border,
-    borderLeftWidth: 1,
+  recurringHeading: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
+  recurringText: { flex: 1, gap: 3 },
+  recurringTitle: { color: colors.text, fontSize: 15, fontWeight: '800' },
+  recurringDescription: { color: colors.muted, fontSize: 12, lineHeight: 17 },
+  switchTrack: {
+    backgroundColor: colors.border,
+    borderRadius: 16,
+    height: 30,
     justifyContent: 'center',
-    paddingHorizontal: spacing.md,
+    padding: 3,
+    width: 52,
   },
-  dateText: { color: colors.text, fontSize: 16 },
+  switchTrackActive: { backgroundColor: colors.primary },
+  switchThumb: {
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    height: 24,
+    width: 24,
+  },
+  switchThumbActive: { alignSelf: 'flex-end' },
   error: { color: colors.danger, fontSize: 14 },
 });

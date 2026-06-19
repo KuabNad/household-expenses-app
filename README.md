@@ -179,13 +179,15 @@ The manual end-to-end checklist is in [docs/testing-checklist.md](docs/testing-c
 - A household cannot yet be renamed, left, transferred, or deleted from the app.
 - Invite codes do not expire or rotate in v1.
 - There is no currency conversion; each currency is summarized separately to avoid misleading totals.
-- There are no receipt photos, recurring expenses, budgets, exports, push notifications, or password-reset screen yet.
+- Recurring expenses support monthly and yearly schedules. They are projected into future monthly views; v1.2 does not create separate Firestore records for every occurrence.
+- There are no receipt photos, budgets, exports, push notifications, or password-reset screen yet.
 - EAS and App Store credentials must be configured by the repository owner.
 
 ## Updating Firestore rules
 
-Version 1.1.1 allows household members to rename default categories and safely
-resolve expenses when deleting a custom category. Replace the
+Version 1.2.0 allows household members to rename default categories, safely
+resolve expenses when deleting a custom category, and save recurring-expense
+settings. Replace the
 rules in Firebase Console with the current [`firebase.rules`](firebase.rules)
 file and publish them before using that feature.
 

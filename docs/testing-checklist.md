@@ -7,6 +7,9 @@ Use two distinct email addresses. For the best sync test, use two devices.
 - [ ] Create a household and confirm the 10 default categories appear.
 - [ ] Create a custom category.
 - [ ] Add an expense with amount, currency, date, category, note, payer, and payment method.
+- [ ] Open the date field, select a day in the in-app calendar, and confirm the chosen date is saved.
+- [ ] Add a monthly recurring expense and confirm it appears in “Suscripciones y recurrentes”.
+- [ ] Move to the next month and confirm the monthly recurring expense is projected there.
 - [ ] Confirm the expense appears in Dashboard and Expenses.
 - [ ] Confirm the monthly total, category total, and payer total are correct.
 - [ ] Change the monthly filter backward and forward.
@@ -18,6 +21,7 @@ Use two distinct email addresses. For the best sync test, use two devices.
 - [ ] Edit account A's own expense.
 - [ ] Change the expense date and confirm it moves to the correct monthly view.
 - [ ] Delete account A's own expense.
+- [ ] Confirm the deleted expense disappears immediately from Dashboard, Expenses, category totals, payer totals, and future recurring projections.
 - [ ] Rename a default category and confirm existing expenses keep that category.
 - [ ] Edit and delete an unused custom category.
 - [ ] Delete a category in use by moving its expenses to “Otros”.

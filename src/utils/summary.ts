@@ -10,7 +10,32 @@ export interface SummaryLine {
 }
 
 export function expensesForMonth(expenses: Expense[], selectedMonth: string) {
-  return expenses.filter((expense) => expense.date.startsWith(selectedMonth));
+  const [selectedYear, selectedMonthNumber] = selectedMonth.split('-').map(Number);
+
+  return expenses.flatMap((expense) => {
+    if (expense.date.startsWith(selectedMonth)) return [expense];
+    if (!expense.isRecurring || !expense.recurrenceFrequency) return [];
+
+    const [startYear, startMonth, startDay] = expense.date.split('-').map(Number);
+    const selectedIndex = selectedYear * 12 + selectedMonthNumber;
+    const startIndex = startYear * 12 + startMonth;
+    if (selectedIndex < startIndex) return [];
+    if (expense.recurrenceFrequency === 'yearly' && selectedMonthNumber !== startMonth) return [];
+
+    const lastDay = new Date(selectedYear, selectedMonthNumber, 0).getDate();
+    const projectedDay = Math.min(startDay, lastDay);
+    return [
+      {
+        ...expense,
+        date: `${selectedMonth}-${String(projectedDay).padStart(2, '0')}`,
+        isProjected: true,
+      },
+    ];
+  });
+}
+
+export function recurringExpenses(expenses: Expense[]) {
+  return expenses.filter((expense) => expense.isRecurring);
 }
 
 export function totalsByCurrency(expenses: Expense[]) {

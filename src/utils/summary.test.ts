@@ -22,6 +22,8 @@ const expenses: Expense[] = [
     createdBy: 'u1',
     createdAt: null,
     updatedAt: null,
+    isRecurring: true,
+    recurrenceFrequency: 'monthly',
   },
   {
     id: 'e2',
@@ -91,5 +93,26 @@ describe('summary helpers', () => {
     expect(isValidDateInput('2026-06-19')).toBe(true);
     expect(isValidDateInput('2026-02-31')).toBe(false);
     expect(isValidDateInput('19/06/2026')).toBe(false);
+  });
+
+  it('projects monthly recurring expenses into future months', () => {
+    const july = expensesForMonth(expenses, '2026-07');
+    expect(july).toHaveLength(1);
+    expect(july[0]).toMatchObject({
+      id: 'e1',
+      date: '2026-07-02',
+      isProjected: true,
+      isRecurring: true,
+    });
+  });
+
+  it('removes a deleted expense from every recalculated total', () => {
+    const remaining = expenses.filter((expense) => expense.id !== 'e1');
+    const june = expensesForMonth(remaining, '2026-06');
+
+    expect(totalsByCurrency(june)).toEqual({ EUR: 10 });
+    expect(spendingByCategory(june, categories)[0].amount).toBe(10);
+    expect(spendingByPayer(june, members).map((item) => item.amount)).toEqual([10]);
+    expect(expensesForMonth(remaining, '2026-07')).toEqual([]);
   });
 });

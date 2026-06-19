@@ -45,6 +45,14 @@ export function DashboardScreen() {
     () => new Map(categories.map((category) => [category.id, category])),
     [categories],
   );
+  const recurringMonthlyExpenses = useMemo(
+    () => monthlyExpenses.filter((expense) => expense.isRecurring),
+    [monthlyExpenses],
+  );
+  const recurringTotals = useMemo(
+    () => totalsByCurrency(recurringMonthlyExpenses),
+    [recurringMonthlyExpenses],
+  );
 
   return (
     <Screen
@@ -93,6 +101,33 @@ export function DashboardScreen() {
             </Text>
             <SummaryBars items={payerTotals} />
           </View>
+          {recurringMonthlyExpenses.length ? (
+            <View style={styles.subscriptionCard}>
+              <View style={styles.subscriptionHeader}>
+                <View style={styles.subscriptionTitleWrap}>
+                  <Text style={styles.subscriptionEyebrow}>SUSCRIPCIONES Y RECURRENTES</Text>
+                  <Text style={styles.subscriptionSubtitle}>
+                    Gastos que se repiten durante este mes
+                  </Text>
+                </View>
+                <View>
+                  {Object.entries(recurringTotals).map(([currency, amount]) => (
+                    <Text key={currency} style={styles.subscriptionTotal}>
+                      {formatMoney(amount ?? 0, currency)}
+                    </Text>
+                  ))}
+                </View>
+              </View>
+              {recurringMonthlyExpenses.map((expense) => (
+                <ExpenseRow
+                  category={categoryMap.get(expense.categoryId)}
+                  expense={expense}
+                  key={`recurring-${expense.id}`}
+                  member={household?.members[expense.paidByUserId]}
+                />
+              ))}
+            </View>
+          ) : null}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
               {selectedCategoryId ? 'Gastos de la categoría' : 'Gastos recientes'}
@@ -130,4 +165,27 @@ const styles = StyleSheet.create({
   },
   section: { gap: spacing.sm },
   sectionTitle: { color: colors.text, fontSize: 18, fontWeight: '800' },
+  subscriptionCard: {
+    backgroundColor: '#E8F0EC',
+    borderColor: '#C5D8CF',
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    gap: spacing.sm,
+    padding: spacing.lg,
+  },
+  subscriptionHeader: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: spacing.md,
+    justifyContent: 'space-between',
+  },
+  subscriptionTitleWrap: { flex: 1, gap: 3 },
+  subscriptionEyebrow: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
+  subscriptionSubtitle: { color: colors.muted, fontSize: 12 },
+  subscriptionTotal: { color: colors.primary, fontSize: 17, fontWeight: '900', textAlign: 'right' },
 });

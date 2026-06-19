@@ -61,7 +61,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
             await setDoc(userRef, {
               id: nextUser.uid,
               email: nextUser.email ?? '',
-              displayName: nextUser.displayName ?? nextUser.email?.split('@')[0] ?? 'Member',
+              displayName: nextUser.displayName ?? nextUser.email?.split('@')[0] ?? 'Miembro',
               householdId: null,
               createdAt: serverTimestamp(),
             });

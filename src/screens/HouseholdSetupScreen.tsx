@@ -21,14 +21,14 @@ export function HouseholdSetupScreen({ navigation }: Props) {
 
   const submit = async () => {
     if (name.trim().length < 2) {
-      Alert.alert('Household name needed', 'Enter at least 2 characters.');
+      Alert.alert('Nombre del hogar necesario', 'Introduce al menos 2 caracteres.');
       return;
     }
     try {
       setLoading(true);
       await createHousehold(name);
     } catch (error) {
-      Alert.alert('Could not create household', friendlyError(error));
+      Alert.alert('No se pudo crear el hogar', friendlyError(error));
     } finally {
       setLoading(false);
     }
@@ -36,38 +36,38 @@ export function HouseholdSetupScreen({ navigation }: Props) {
 
   return (
     <Screen
-      subtitle={`Welcome, ${profile?.displayName ?? 'there'}. Start a new shared space or join an existing one.`}
-      title="Your household"
+      subtitle={`Bienvenido, ${profile?.displayName ?? ''}. Crea un espacio compartido o únete a uno.`}
+      title="Tu hogar"
     >
       <View style={styles.card}>
         <View style={styles.icon}>
           <Ionicons color={colors.primary} name="home-outline" size={28} />
         </View>
-        <Text style={styles.cardTitle}>Create a household</Text>
+        <Text style={styles.cardTitle}>Crear un hogar</Text>
         <Text style={styles.body}>
-          We will add the default categories and make an invite code for the next person.
+          Añadiremos las categorías predeterminadas y crearemos un código de invitación.
         </Text>
         <AppInput
           autoCapitalize="words"
-          label="Household name"
+          label="Nombre del hogar"
           onChangeText={setName}
-          placeholder="Kuba and Laura"
+          placeholder="Kuba y Laura"
           value={name}
         />
-        <AppButton label="Create household" loading={loading} onPress={submit} />
+        <AppButton label="Crear hogar" loading={loading} onPress={submit} />
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Already have an invite?</Text>
-        <Text style={styles.body}>Use the 8-character code shared by a household member.</Text>
+        <Text style={styles.cardTitle}>¿Ya tienes una invitación?</Text>
+        <Text style={styles.body}>Usa el código de 8 caracteres compartido por un miembro.</Text>
         <AppButton
-          label="Join with invite code"
+          label="Unirse con código"
           onPress={() => navigation.navigate('JoinHousehold')}
           variant="secondary"
         />
       </View>
 
-      <AppButton label="Log out" onPress={logout} variant="text" />
+      <AppButton label="Cerrar sesión" onPress={logout} variant="text" />
     </Screen>
   );
 }

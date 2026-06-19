@@ -14,27 +14,27 @@ export function SettingsScreen() {
   const shareInvite = async () => {
     if (!household) return;
     await Share.share({
-      message: `Join “${household.name}” in Household Expenses. Invite code: ${household.inviteCode}`,
+      message: `Únete a “${household.name}” en Gastos del hogar. Código: ${household.inviteCode}`,
     });
   };
 
   return (
-    <Screen subtitle={profile?.email} title="Settings">
+    <Screen subtitle={profile?.email} title="Ajustes">
       {syncError ? <Notice message={syncError} /> : null}
       <View style={styles.card}>
-        <Text style={styles.eyebrow}>HOUSEHOLD</Text>
-        <Text style={styles.cardTitle}>{household?.name ?? 'Loading…'}</Text>
-        <Text style={styles.body}>Share this code with someone you trust.</Text>
+        <Text style={styles.eyebrow}>HOGAR</Text>
+        <Text style={styles.cardTitle}>{household?.name ?? 'Cargando…'}</Text>
+        <Text style={styles.body}>Comparte este código con una persona de confianza.</Text>
         <View style={styles.codeBox}>
           <Text selectable style={styles.code}>
             {household?.inviteCode ?? '--------'}
           </Text>
         </View>
-        <AppButton label="Share invite" onPress={shareInvite} variant="secondary" />
+        <AppButton label="Compartir invitación" onPress={shareInvite} variant="secondary" />
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.eyebrow}>MEMBERS</Text>
+        <Text style={styles.eyebrow}>MIEMBROS</Text>
         {Object.entries(household?.members ?? {}).map(([id, member]) => (
           <View key={id} style={styles.member}>
             <View style={styles.avatar}>
@@ -46,7 +46,7 @@ export function SettingsScreen() {
             </View>
             {id === household?.createdBy ? (
               <View style={styles.ownerBadge}>
-                <Text style={styles.ownerText}>Owner</Text>
+                <Text style={styles.ownerText}>Creador</Text>
               </View>
             ) : null}
           </View>
@@ -57,16 +57,16 @@ export function SettingsScreen() {
         <View style={styles.infoRow}>
           <Ionicons color={colors.primary} name="shield-checkmark-outline" size={22} />
           <View style={styles.memberText}>
-            <Text style={styles.memberName}>Private household data</Text>
+            <Text style={styles.memberName}>Datos privados del hogar</Text>
             <Text style={styles.memberEmail}>
-              Firebase rules restrict expenses and categories to household members.
+              Las reglas de Firebase limitan los gastos y categorías a los miembros del hogar.
             </Text>
           </View>
         </View>
       </View>
 
-      <AppButton label="Log out" onPress={logout} variant="danger" />
-      <Text style={styles.version}>Household Expenses v1.0.0</Text>
+      <AppButton label="Cerrar sesión" onPress={logout} variant="danger" />
+      <Text style={styles.version}>Gastos del hogar v1.1.0</Text>
     </Screen>
   );
 }

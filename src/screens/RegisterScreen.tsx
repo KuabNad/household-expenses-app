@@ -20,14 +20,17 @@ export function RegisterScreen({ navigation }: Props) {
 
   const submit = async () => {
     if (!displayName.trim() || !email.trim() || password.length < 6) {
-      Alert.alert('Check your details', 'Add your name, a valid email, and a 6+ character password.');
+      Alert.alert(
+        'Revisa tus datos',
+        'Añade tu nombre, un correo válido y una contraseña de al menos 6 caracteres.',
+      );
       return;
     }
     try {
       setLoading(true);
       await register(displayName, email, password);
     } catch (error) {
-      Alert.alert('Could not create account', friendlyError(error));
+      Alert.alert('No se pudo crear la cuenta', friendlyError(error));
     } finally {
       setLoading(false);
     }
@@ -36,14 +39,14 @@ export function RegisterScreen({ navigation }: Props) {
   return (
     <Screen contentStyle={styles.screen}>
       <View style={styles.heading}>
-        <Text style={styles.title}>Create your account</Text>
-        <Text style={styles.subtitle}>You can create a household or join one next.</Text>
+        <Text style={styles.title}>Crea tu cuenta</Text>
+        <Text style={styles.subtitle}>Después podrás crear un hogar o unirte a uno.</Text>
       </View>
       <View style={styles.form}>
         <AppInput
           autoCapitalize="words"
           autoComplete="name"
-          label="Your name"
+          label="Tu nombre"
           onChangeText={setDisplayName}
           placeholder="Kuba"
           value={displayName}
@@ -52,22 +55,22 @@ export function RegisterScreen({ navigation }: Props) {
           autoCapitalize="none"
           autoComplete="email"
           keyboardType="email-address"
-          label="Email"
+          label="Correo electrónico"
           onChangeText={setEmail}
-          placeholder="you@example.com"
+          placeholder="tu@ejemplo.com"
           value={email}
         />
         <AppInput
           autoCapitalize="none"
           autoComplete="new-password"
-          label="Password"
+          label="Contraseña"
           onChangeText={setPassword}
-          placeholder="At least 6 characters"
+          placeholder="Al menos 6 caracteres"
           secureTextEntry
           value={password}
         />
-        <AppButton label="Create account" loading={loading} onPress={submit} />
-        <AppButton label="Back to login" onPress={() => navigation.goBack()} variant="text" />
+        <AppButton label="Crear cuenta" loading={loading} onPress={submit} />
+        <AppButton label="Volver" onPress={() => navigation.goBack()} variant="text" />
       </View>
     </Screen>
   );

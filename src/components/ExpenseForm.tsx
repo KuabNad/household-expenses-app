@@ -1,9 +1,9 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useMemo, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Category, Currency, ExpenseInput, Household } from '../types/models';
 import { useAuth } from '../hooks/useAuth';
-import { toDateInput } from '../utils/format';
+import { isValidDateInput, toDateInput } from '../utils/format';
 import { colors, radius, spacing } from '../utils/theme';
 import { AppButton } from './AppButton';
 import { AppInput } from './AppInput';
@@ -69,15 +69,19 @@ export function ExpenseForm({
   const submit = () => {
     const parsedAmount = Number(amount.replace(',', '.'));
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      setError('Enter an amount greater than zero.');
+      setError('Introduce un importe mayor que cero.');
+      return;
+    }
+    if (!isValidDateInput(date)) {
+      setError('Introduce una fecha válida.');
       return;
     }
     if (!categoryId) {
-      setError('Choose a category.');
+      setError('Selecciona una categoría.');
       return;
     }
     if (!paidByUserId) {
-      setError('Choose who paid.');
+      setError('Selecciona quién pagó.');
       return;
     }
     setError('');
@@ -98,7 +102,7 @@ export function ExpenseForm({
         <View style={styles.amount}>
           <AppInput
             keyboardType="decimal-pad"
-            label="Amount"
+            label="Importe"
             onChangeText={setAmount}
             placeholder="0.00"
             value={amount}
@@ -107,7 +111,7 @@ export function ExpenseForm({
       </View>
 
       <View style={styles.field}>
-        <Text style={styles.label}>Currency</Text>
+        <Text style={styles.label}>Moneda</Text>
         <View style={styles.choices}>
           {CURRENCIES.map((item) => (
             <Choice
@@ -121,11 +125,21 @@ export function ExpenseForm({
       </View>
 
       <View style={styles.field}>
-        <Text style={styles.label}>Date</Text>
-        <Pressable onPress={() => setShowDate((value) => !value)} style={styles.dateButton}>
-          <Text style={styles.dateText}>{date}</Text>
-        </Pressable>
-        {showDate ? (
+        <Text style={styles.label}>Fecha</Text>
+        {Platform.OS === 'web' ? (
+          <TextInput
+            accessibilityLabel="Fecha"
+            onChangeText={setDate}
+            style={styles.dateButton}
+            value={date}
+            {...({ type: 'date', max: toDateInput(new Date()) } as object)}
+          />
+        ) : (
+          <Pressable onPress={() => setShowDate((value) => !value)} style={styles.dateButton}>
+            <Text style={styles.dateText}>{date}</Text>
+          </Pressable>
+        )}
+        {showDate && Platform.OS !== 'web' ? (
           <DateTimePicker
             display={Platform.OS === 'ios' ? 'inline' : 'default'}
             maximumDate={new Date()}
@@ -140,7 +154,7 @@ export function ExpenseForm({
       </View>
 
       <View style={styles.field}>
-        <Text style={styles.label}>Category</Text>
+        <Text style={styles.label}>Categoría</Text>
         <View style={styles.choices}>
           {categories.map((category) => (
             <Choice
@@ -155,15 +169,15 @@ export function ExpenseForm({
       </View>
 
       <AppInput
-        label="Description / note"
+        label="Descripción / nota"
         multiline
         onChangeText={setDescription}
-        placeholder="Weekly groceries"
+        placeholder="Compra semanal"
         value={description}
       />
 
       <View style={styles.field}>
-        <Text style={styles.label}>Paid by</Text>
+        <Text style={styles.label}>Pagado por</Text>
         <View style={styles.choices}>
           {members.map(([id, member]) => (
             <Choice
@@ -177,9 +191,9 @@ export function ExpenseForm({
       </View>
 
       <AppInput
-        label="Payment method (optional)"
+        label="Método de pago (opcional)"
         onChangeText={setPaymentMethod}
-        placeholder="Card, cash, bank transfer"
+        placeholder="Tarjeta, efectivo, transferencia"
         value={paymentMethod}
       />
 
@@ -214,6 +228,8 @@ const styles = StyleSheet.create({
     minHeight: 50,
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
+    color: colors.text,
+    fontSize: 16,
   },
   dateText: { color: colors.text, fontSize: 16 },
   error: { color: colors.danger, fontSize: 14 },

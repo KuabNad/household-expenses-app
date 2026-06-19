@@ -25,17 +25,17 @@ export function EditExpenseScreen({ route, navigation }: Props) {
       await updateExpense(expense.id, input);
       navigation.goBack();
     } catch (error) {
-      Alert.alert('Could not update expense', friendlyError(error));
+      Alert.alert('No se pudo actualizar el gasto', friendlyError(error));
     } finally {
       setLoading(false);
     }
   };
 
   const confirmDelete = () => {
-    Alert.alert('Delete expense?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert('¿Eliminar gasto?', 'Esta acción no se puede deshacer.', [
+      { text: 'Cancelar', style: 'cancel' },
       {
-        text: 'Delete',
+        text: 'Eliminar',
         style: 'destructive',
         onPress: async () => {
           try {
@@ -43,7 +43,7 @@ export function EditExpenseScreen({ route, navigation }: Props) {
             await deleteExpense(expense);
             navigation.goBack();
           } catch (error) {
-            Alert.alert('Could not delete expense', friendlyError(error));
+            Alert.alert('No se pudo eliminar el gasto', friendlyError(error));
             setLoading(false);
           }
         },
@@ -54,7 +54,7 @@ export function EditExpenseScreen({ route, navigation }: Props) {
   if (!household || !isOwner) {
     return (
       <Screen>
-        <AppButton label="Back" onPress={() => navigation.goBack()} variant="secondary" />
+        <AppButton label="Volver" onPress={() => navigation.goBack()} variant="secondary" />
       </Screen>
     );
   }
@@ -67,9 +67,9 @@ export function EditExpenseScreen({ route, navigation }: Props) {
         initial={expense}
         loading={loading}
         onSubmit={submit}
-        submitLabel="Save changes"
+        submitLabel="Guardar cambios"
       />
-      <AppButton label="Delete expense" onPress={confirmDelete} variant="danger" />
+      <AppButton label="Eliminar gasto" onPress={confirmDelete} variant="danger" />
     </Screen>
   );
 }

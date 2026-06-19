@@ -15,6 +15,10 @@ The same codebase also runs as a web app on GitHub Pages. See [docs/web-deployme
 - Create, edit, and delete shared custom categories
 - Monthly dashboard with totals by currency, category bars, payer totals, and recent expenses
 - Month filtering
+- Spanish interface and Spanish default categories
+- Editable expense dates on web and mobile
+- Editable names for default and custom categories
+- Interactive category pie chart that filters totals, payer summaries, and expenses
 - Loading, empty, validation, and network-error states
 - Firebase Authentication persistence on iPhone
 - Deployable Firestore security rules
@@ -175,6 +179,12 @@ The manual end-to-end checklist is in [docs/testing-checklist.md](docs/testing-c
 - There is no currency conversion; each currency is summarized separately to avoid misleading totals.
 - There are no receipt photos, recurring expenses, budgets, exports, push notifications, or password-reset screen yet.
 - EAS and App Store credentials must be configured by the repository owner.
+
+## Updating Firestore rules
+
+Version 1.1 allows household members to rename default categories. Replace the
+rules in Firebase Console with the current [`firebase.rules`](firebase.rules)
+file and publish them before using that feature.
 
 ## License
 

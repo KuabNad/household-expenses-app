@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Household Expenses",
+    "name": "Gastos del hogar",
     "slug": "household-expenses-app",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -22,9 +22,10 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "name": "Household Expenses",
-      "shortName": "Expenses",
-      "description": "A private shared expense tracker for households.",
+      "name": "Gastos del hogar",
+      "shortName": "Gastos",
+      "description": "Control privado y compartido de gastos del hogar.",
+      "lang": "es",
       "display": "standalone",
       "themeColor": "#315C4C",
       "backgroundColor": "#F6F7F2",

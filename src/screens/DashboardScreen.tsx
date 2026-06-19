@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { EmptyState } from '../components/EmptyState';
 import { ExpenseRow } from '../components/ExpenseRow';
+import { InteractivePieChart } from '../components/InteractivePieChart';
 import { MonthSelector } from '../components/MonthSelector';
 import { Notice } from '../components/Notice';
 import { Screen } from '../components/Screen';
@@ -19,18 +20,26 @@ import { colors, radius, spacing } from '../utils/theme';
 export function DashboardScreen() {
   const { household, categories, expenses, syncError } = useHousehold();
   const [selectedMonth, setSelectedMonth] = useState(monthKey(new Date()));
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const monthlyExpenses = useMemo(
     () => expensesForMonth(expenses, selectedMonth),
     [expenses, selectedMonth],
   );
-  const totals = useMemo(() => totalsByCurrency(monthlyExpenses), [monthlyExpenses]);
   const categoryTotals = useMemo(
     () => spendingByCategory(monthlyExpenses, categories),
     [categories, monthlyExpenses],
   );
+  const visibleExpenses = useMemo(
+    () =>
+      selectedCategoryId
+        ? monthlyExpenses.filter((expense) => expense.categoryId === selectedCategoryId)
+        : monthlyExpenses,
+    [monthlyExpenses, selectedCategoryId],
+  );
+  const visibleTotals = useMemo(() => totalsByCurrency(visibleExpenses), [visibleExpenses]);
   const payerTotals = useMemo(
-    () => spendingByPayer(monthlyExpenses, household?.members ?? {}),
-    [household?.members, monthlyExpenses],
+    () => spendingByPayer(visibleExpenses, household?.members ?? {}),
+    [household?.members, visibleExpenses],
   );
   const categoryMap = useMemo(
     () => new Map(categories.map((category) => [category.id, category])),
@@ -39,16 +48,18 @@ export function DashboardScreen() {
 
   return (
     <Screen
-      subtitle={household ? household.name : 'Your shared household overview'}
-      title="Dashboard"
+      subtitle={household ? household.name : 'Resumen compartido del hogar'}
+      title="Resumen"
     >
       {syncError ? <Notice message={syncError} /> : null}
       <MonthSelector month={selectedMonth} onChange={setSelectedMonth} />
 
       <View style={styles.totalCard}>
-        <Text style={styles.eyebrow}>TOTAL SPENDING</Text>
-        {Object.entries(totals).length ? (
-          Object.entries(totals).map(([currency, amount]) => (
+        <Text style={styles.eyebrow}>
+          {selectedCategoryId ? 'TOTAL DE LA CATEGORÍA' : 'GASTO TOTAL'}
+        </Text>
+        {Object.entries(visibleTotals).length ? (
+          Object.entries(visibleTotals).map(([currency, amount]) => (
             <Text key={currency} style={styles.total}>
               {formatMoney(amount ?? 0, currency)}
             </Text>
@@ -57,28 +68,36 @@ export function DashboardScreen() {
           <Text style={styles.total}>—</Text>
         )}
         <Text style={styles.totalHint}>
-          Totals stay separate when the household uses multiple currencies.
+          Los totales se muestran por separado cuando se utilizan varias monedas.
         </Text>
       </View>
 
       {monthlyExpenses.length === 0 ? (
         <EmptyState
-          message="Add the first expense and the monthly picture will appear here."
-          title="Nothing to summarize yet"
+          message="Añade el primer gasto y aquí aparecerá el resumen mensual."
+          title="Todavía no hay datos"
         />
       ) : (
         <>
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>By category</Text>
-            <SummaryBars items={categoryTotals} />
+            <Text style={styles.sectionTitle}>Gastos por categoría</Text>
+            <InteractivePieChart
+              items={categoryTotals}
+              onSelect={setSelectedCategoryId}
+              selectedCategoryId={selectedCategoryId}
+            />
           </View>
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Who paid</Text>
+            <Text style={styles.sectionTitle}>
+              {selectedCategoryId ? 'Quién pagó en esta categoría' : 'Quién pagó'}
+            </Text>
             <SummaryBars items={payerTotals} />
           </View>
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Recent expenses</Text>
-            {monthlyExpenses.slice(0, 5).map((expense) => (
+            <Text style={styles.sectionTitle}>
+              {selectedCategoryId ? 'Gastos de la categoría' : 'Gastos recientes'}
+            </Text>
+            {visibleExpenses.slice(0, 5).map((expense) => (
               <ExpenseRow
                 category={categoryMap.get(expense.categoryId)}
                 expense={expense}

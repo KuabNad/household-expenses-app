@@ -30,12 +30,12 @@ export function ExpenseRow({
       </View>
       <View style={styles.details}>
         <Text numberOfLines={1} style={styles.description}>
-          {expense.description || category?.name || 'Expense'}
+          {expense.description || category?.name || 'Gasto'}
         </Text>
         <Text style={styles.meta}>
-          {category?.name ?? 'Deleted category'} · {formatDate(expense.date)}
+          {category?.name ?? 'Categoría eliminada'} · {formatDate(expense.date)}
         </Text>
-        <Text style={styles.meta}>Paid by {member?.displayName ?? 'Unknown member'}</Text>
+        <Text style={styles.meta}>Pagado por {member?.displayName ?? 'Miembro desconocido'}</Text>
       </View>
       <Text style={styles.amount}>{formatMoney(expense.amount, expense.currency)}</Text>
     </Pressable>

@@ -1,16 +1,16 @@
 export function friendlyError(error: unknown) {
-  const fallback = 'Something went wrong. Check your connection and try again.';
+  const fallback = 'Algo salió mal. Comprueba tu conexión e inténtalo de nuevo.';
   if (!(error instanceof Error)) return fallback;
 
   const code = 'code' in error ? String(error.code) : '';
   const messages: Record<string, string> = {
-    'auth/email-already-in-use': 'An account already uses this email.',
-    'auth/invalid-credential': 'The email or password is incorrect.',
-    'auth/invalid-email': 'Enter a valid email address.',
-    'auth/network-request-failed': 'No internet connection. Please try again when online.',
-    'auth/weak-password': 'Use a password with at least 6 characters.',
-    'permission-denied': 'You do not have permission to do that.',
-    'unavailable': 'The service is temporarily unavailable. Please try again.',
+    'auth/email-already-in-use': 'Ya existe una cuenta con este correo.',
+    'auth/invalid-credential': 'El correo o la contraseña son incorrectos.',
+    'auth/invalid-email': 'Introduce un correo electrónico válido.',
+    'auth/network-request-failed': 'No hay conexión a internet.',
+    'auth/weak-password': 'Usa una contraseña de al menos 6 caracteres.',
+    'permission-denied': 'No tienes permiso para realizar esta acción.',
+    'unavailable': 'El servicio no está disponible temporalmente.',
   };
 
   return messages[code.replace('firestore/', '')] ?? error.message ?? fallback;

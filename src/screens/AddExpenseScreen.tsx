@@ -22,27 +22,27 @@ export function AddExpenseScreen({ navigation }: Props) {
       setLoading(true);
       await addExpense(input);
       setFormKey((value) => value + 1);
-      Alert.alert('Expense saved', 'Everyone in the household can see it now.', [
-        { text: 'Add another' },
-        { text: 'View expenses', onPress: () => navigation.navigate('Expenses') },
+      Alert.alert('Gasto guardado', 'Todos los miembros del hogar ya pueden verlo.', [
+        { text: 'Añadir otro' },
+        { text: 'Ver gastos', onPress: () => navigation.navigate('Expenses') },
       ]);
     } catch (error) {
-      Alert.alert('Could not save expense', friendlyError(error));
+      Alert.alert('No se pudo guardar el gasto', friendlyError(error));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Screen subtitle="Add the essentials now; tidy notes can wait." title="Add expense">
+    <Screen subtitle="Añade los datos principales del gasto." title="Añadir gasto">
       {syncError ? <Notice message={syncError} /> : null}
       {!household ? (
-        <EmptyState message="Your household is still loading." title="Just a moment" />
+        <EmptyState message="Tu hogar todavía se está cargando." title="Un momento" />
       ) : categories.length === 0 ? (
         <EmptyState
           icon="pricetags-outline"
-          message="Create at least one category before adding an expense."
-          title="No categories yet"
+          message="Crea al menos una categoría antes de añadir un gasto."
+          title="Todavía no hay categorías"
         />
       ) : (
         <ExpenseForm
@@ -51,7 +51,7 @@ export function AddExpenseScreen({ navigation }: Props) {
           key={formKey}
           loading={loading}
           onSubmit={submit}
-          submitLabel="Save expense"
+          submitLabel="Guardar gasto"
         />
       )}
     </Screen>

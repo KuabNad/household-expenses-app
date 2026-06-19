@@ -2,6 +2,7 @@ import type { Category, Currency, Expense, HouseholdMember } from '../types/mode
 
 export interface SummaryLine {
   id: string;
+  sourceId?: string;
   label: string;
   amount: number;
   currency: Currency;
@@ -29,7 +30,8 @@ export function spendingByCategory(expenses: Expense[], categories: Category[]) 
     const current = totals.get(key);
     totals.set(key, {
       id: key,
-      label: category?.name ?? 'Deleted category',
+      sourceId: expense.categoryId,
+      label: category?.name ?? 'Categoría eliminada',
       amount: (current?.amount ?? 0) + expense.amount,
       currency: expense.currency,
       color: category?.color,
@@ -50,7 +52,7 @@ export function spendingByPayer(
     const current = totals.get(key);
     totals.set(key, {
       id: key,
-      label: members[expense.paidByUserId]?.displayName ?? 'Unknown member',
+      label: members[expense.paidByUserId]?.displayName ?? 'Miembro desconocido',
       amount: (current?.amount ?? 0) + expense.amount,
       currency: expense.currency,
     });

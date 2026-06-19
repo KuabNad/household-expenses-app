@@ -6,6 +6,7 @@ import {
   spendingByPayer,
   totalsByCurrency,
 } from './summary';
+import { isValidDateInput } from './format';
 
 const expenses: Expense[] = [
   {
@@ -84,5 +85,11 @@ describe('summary helpers', () => {
       currency: 'EUR',
     });
     expect(spendingByPayer(june, members).map((item) => item.amount)).toEqual([42.5, 10]);
+  });
+
+  it('validates editable expense dates', () => {
+    expect(isValidDateInput('2026-06-19')).toBe(true);
+    expect(isValidDateInput('2026-02-31')).toBe(false);
+    expect(isValidDateInput('19/06/2026')).toBe(false);
   });
 });

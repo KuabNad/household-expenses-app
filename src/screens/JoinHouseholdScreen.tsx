@@ -18,14 +18,14 @@ export function JoinHouseholdScreen({ navigation }: Props) {
 
   const submit = async () => {
     if (code.trim().length !== 8) {
-      Alert.alert('Check the code', 'Invite codes contain 8 letters or numbers.');
+      Alert.alert('Revisa el código', 'El código contiene 8 letras o números.');
       return;
     }
     try {
       setLoading(true);
       await joinHousehold(code);
     } catch (error) {
-      Alert.alert('Could not join household', friendlyError(error));
+      Alert.alert('No se pudo unir al hogar', friendlyError(error));
     } finally {
       setLoading(false);
     }
@@ -33,12 +33,12 @@ export function JoinHouseholdScreen({ navigation }: Props) {
 
   return (
     <Screen contentStyle={styles.screen}>
-      <Text style={styles.title}>Join a household</Text>
-      <Text style={styles.subtitle}>Ask a member for the invite code shown in Settings.</Text>
+      <Text style={styles.title}>Únete a un hogar</Text>
+      <Text style={styles.subtitle}>Pide a un miembro el código que aparece en Ajustes.</Text>
       <AppInput
         autoCapitalize="characters"
         autoCorrect={false}
-        label="Invite code"
+        label="Código de invitación"
         maxLength={8}
         onChangeText={(value) => setCode(value.toUpperCase())}
         onSubmitEditing={submit}
@@ -46,8 +46,8 @@ export function JoinHouseholdScreen({ navigation }: Props) {
         style={styles.code}
         value={code}
       />
-      <AppButton label="Join household" loading={loading} onPress={submit} />
-      <AppButton label="Back" onPress={() => navigation.goBack()} variant="text" />
+      <AppButton label="Unirse al hogar" loading={loading} onPress={submit} />
+      <AppButton label="Volver" onPress={() => navigation.goBack()} variant="text" />
     </Screen>
   );
 }

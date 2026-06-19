@@ -19,6 +19,7 @@ export function CategoryManagementScreen() {
   const [name, setName] = useState('');
   const [color, setColor] = useState(COLORS[0]);
   const [loading, setLoading] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<Category | null>(null);
 
   const reset = () => {
     setEditing(null);
@@ -28,7 +29,7 @@ export function CategoryManagementScreen() {
 
   const submit = async () => {
     if (name.trim().length < 2) {
-      Alert.alert('Category name needed', 'Enter at least 2 characters.');
+      Alert.alert('Nombre necesario', 'Introduce al menos 2 caracteres.');
       return;
     }
     try {
@@ -37,7 +38,7 @@ export function CategoryManagementScreen() {
       else await addCategory(name, color);
       reset();
     } catch (error) {
-      Alert.alert('Could not save category', friendlyError(error));
+      Alert.alert('No se pudo guardar la categoría', friendlyError(error));
     } finally {
       setLoading(false);
     }
@@ -49,36 +50,32 @@ export function CategoryManagementScreen() {
     setColor(category.color ?? COLORS[0]);
   };
 
-  const remove = (category: Category) => {
-    Alert.alert('Delete category?', `Delete “${category.name}”?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteCategory(category);
-          } catch (error) {
-            Alert.alert('Could not delete category', friendlyError(error));
-          }
-        },
-      },
-    ]);
+  const remove = async () => {
+    if (!pendingDelete) return;
+    try {
+      setLoading(true);
+      await deleteCategory(pendingDelete);
+      setPendingDelete(null);
+    } catch (error) {
+      Alert.alert('No se pudo eliminar la categoría', friendlyError(error));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <Screen
-      subtitle="Default categories stay put. Custom ones are shared with everyone."
-      title="Categories"
+      subtitle="Puedes renombrar todas las categorías. Solo se pueden eliminar las personalizadas."
+      title="Categorías"
     >
       {syncError ? <Notice message={syncError} /> : null}
       <View style={styles.form}>
-        <Text style={styles.formTitle}>{editing ? 'Edit category' : 'New category'}</Text>
-        <AppInput label="Name" onChangeText={setName} placeholder="Pets" value={name} />
+        <Text style={styles.formTitle}>{editing ? 'Editar categoría' : 'Nueva categoría'}</Text>
+        <AppInput label="Nombre" onChangeText={setName} placeholder="Mascotas" value={name} />
         <View style={styles.colors}>
           {COLORS.map((item) => (
             <Pressable
-              accessibilityLabel={`Use color ${item}`}
+              accessibilityLabel={`Usar color ${item}`}
               key={item}
               onPress={() => setColor(item)}
               style={[
@@ -91,10 +88,10 @@ export function CategoryManagementScreen() {
         </View>
         <View style={styles.actions}>
           {editing ? (
-            <AppButton label="Cancel" onPress={reset} style={styles.action} variant="text" />
+            <AppButton label="Cancelar" onPress={reset} style={styles.action} variant="text" />
           ) : null}
           <AppButton
-            label={editing ? 'Save category' : 'Add category'}
+            label={editing ? 'Guardar categoría' : 'Añadir categoría'}
             loading={loading}
             onPress={submit}
             style={styles.action}
@@ -103,7 +100,7 @@ export function CategoryManagementScreen() {
       </View>
 
       {categories.length === 0 ? (
-        <EmptyState message="Categories will appear here." title="No categories yet" />
+        <EmptyState message="Las categorías aparecerán aquí." title="Todavía no hay categorías" />
       ) : (
         <View style={styles.list}>
           {categories.map((category) => (
@@ -111,22 +108,46 @@ export function CategoryManagementScreen() {
               <View style={[styles.dot, { backgroundColor: category.color ?? colors.muted }]} />
               <View style={styles.nameWrap}>
                 <Text style={styles.name}>{category.name}</Text>
-                <Text style={styles.type}>{category.isDefault ? 'Default' : 'Custom'}</Text>
+                <Text style={styles.type}>
+                  {category.isDefault ? 'Predeterminada' : 'Personalizada'}
+                </Text>
               </View>
+              <Pressable hitSlop={10} onPress={() => edit(category)}>
+                <Ionicons color={colors.primary} name="pencil-outline" size={21} />
+              </Pressable>
               {!category.isDefault ? (
-                <>
-                  <Pressable hitSlop={10} onPress={() => edit(category)}>
-                    <Ionicons color={colors.primary} name="pencil-outline" size={21} />
-                  </Pressable>
-                  <Pressable hitSlop={10} onPress={() => remove(category)}>
-                    <Ionicons color={colors.danger} name="trash-outline" size={21} />
-                  </Pressable>
-                </>
+                <Pressable hitSlop={10} onPress={() => setPendingDelete(category)}>
+                  <Ionicons color={colors.danger} name="trash-outline" size={21} />
+                </Pressable>
               ) : null}
             </View>
           ))}
         </View>
       )}
+
+      {pendingDelete ? (
+        <View style={styles.confirmCard}>
+          <Text style={styles.confirmTitle}>¿Eliminar “{pendingDelete.name}”?</Text>
+          <Text style={styles.confirmText}>
+            La categoría se eliminará de forma permanente. No puede contener gastos.
+          </Text>
+          <View style={styles.actions}>
+            <AppButton
+              label="Cancelar"
+              onPress={() => setPendingDelete(null)}
+              style={styles.action}
+              variant="secondary"
+            />
+            <AppButton
+              label="Eliminar"
+              loading={loading}
+              onPress={remove}
+              style={styles.action}
+              variant="danger"
+            />
+          </View>
+        </View>
+      ) : null}
     </Screen>
   );
 }
@@ -157,4 +178,12 @@ const styles = StyleSheet.create({
   nameWrap: { flex: 1, gap: 2 },
   name: { color: colors.text, fontSize: 15, fontWeight: '700' },
   type: { color: colors.muted, fontSize: 12 },
+  confirmCard: {
+    backgroundColor: '#F7E3E3',
+    borderRadius: radius.lg,
+    gap: spacing.sm,
+    padding: spacing.lg,
+  },
+  confirmTitle: { color: colors.danger, fontSize: 18, fontWeight: '800' },
+  confirmText: { color: colors.text, lineHeight: 20 },
 });

@@ -20,14 +20,14 @@ export function LoginScreen({ navigation }: Props) {
 
   const submit = async () => {
     if (!email.trim() || !password) {
-      Alert.alert('Missing details', 'Enter your email and password.');
+      Alert.alert('Faltan datos', 'Introduce tu correo electrónico y contraseña.');
       return;
     }
     try {
       setLoading(true);
       await login(email, password);
     } catch (error) {
-      Alert.alert('Could not log in', friendlyError(error));
+      Alert.alert('No se pudo iniciar sesión', friendlyError(error));
     } finally {
       setLoading(false);
     }
@@ -39,14 +39,14 @@ export function LoginScreen({ navigation }: Props) {
         <View style={styles.mark}>
           <Text style={styles.markText}>H</Text>
         </View>
-        <Text style={styles.title}>Household Expenses</Text>
-        <Text style={styles.subtitle}>Shared spending, without the spreadsheet archaeology.</Text>
+        <Text style={styles.title}>Gastos del hogar</Text>
+        <Text style={styles.subtitle}>Gastos compartidos, claros y sin complicaciones.</Text>
       </View>
 
       {!isFirebaseConfigured ? (
         <View style={styles.configWarning}>
           <Text style={styles.configText}>
-            Firebase is not configured yet. Copy .env.example to .env and add your project values.
+            Firebase todavía no está configurado. Copia .env.example a .env y añade los valores.
           </Text>
         </View>
       ) : null}
@@ -56,24 +56,24 @@ export function LoginScreen({ navigation }: Props) {
           autoCapitalize="none"
           autoComplete="email"
           keyboardType="email-address"
-          label="Email"
+          label="Correo electrónico"
           onChangeText={setEmail}
-          placeholder="you@example.com"
+          placeholder="tu@ejemplo.com"
           value={email}
         />
         <AppInput
           autoCapitalize="none"
           autoComplete="password"
-          label="Password"
+          label="Contraseña"
           onChangeText={setPassword}
           onSubmitEditing={submit}
-          placeholder="Your password"
+          placeholder="Tu contraseña"
           secureTextEntry
           value={password}
         />
-        <AppButton label="Log in" loading={loading} onPress={submit} />
+        <AppButton label="Iniciar sesión" loading={loading} onPress={submit} />
         <AppButton
-          label="Create an account"
+          label="Crear una cuenta"
           onPress={() => navigation.navigate('Register')}
           variant="text"
         />

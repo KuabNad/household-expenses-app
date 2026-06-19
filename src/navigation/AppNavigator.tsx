@@ -47,7 +47,7 @@ function ExpensesNavigator() {
   return (
     <ExpenseStack.Navigator
       screenOptions={{
-        headerBackTitle: 'Expenses',
+        headerBackTitle: 'Gastos',
         headerShadowVisible: false,
         headerStyle: { backgroundColor: colors.background },
         headerTintColor: colors.primary,
@@ -61,7 +61,7 @@ function ExpensesNavigator() {
       <ExpenseStack.Screen
         component={EditExpenseScreen}
         name="EditExpense"
-        options={{ title: 'Edit expense' }}
+        options={{ title: 'Editar gasto' }}
       />
     </ExpenseStack.Navigator>
   );
@@ -89,15 +89,19 @@ function MainNavigator() {
         ),
       })}
     >
-      <Tabs.Screen component={DashboardScreen} name="Dashboard" />
-      <Tabs.Screen component={ExpensesNavigator} name="Expenses" />
+      <Tabs.Screen component={DashboardScreen} name="Dashboard" options={{ title: 'Resumen' }} />
+      <Tabs.Screen component={ExpensesNavigator} name="Expenses" options={{ title: 'Gastos' }} />
       <Tabs.Screen
         component={AddExpenseScreen}
         name="AddExpense"
-        options={{ title: 'Add' }}
+        options={{ title: 'Añadir' }}
       />
-      <Tabs.Screen component={CategoryManagementScreen} name="Categories" />
-      <Tabs.Screen component={SettingsScreen} name="Settings" />
+      <Tabs.Screen
+        component={CategoryManagementScreen}
+        name="Categories"
+        options={{ title: 'Categorías' }}
+      />
+      <Tabs.Screen component={SettingsScreen} name="Settings" options={{ title: 'Ajustes' }} />
     </Tabs.Navigator>
   );
 }

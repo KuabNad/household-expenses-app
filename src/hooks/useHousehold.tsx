@@ -21,7 +21,7 @@ import {
   useState,
   type PropsWithChildren,
 } from 'react';
-import { DEFAULT_CATEGORIES } from '../utils/categories';
+import { DEFAULT_CATEGORIES, DEFAULT_CATEGORY_TRANSLATIONS } from '../utils/categories';
 import { db } from '../services/firebase';
 import type { Category, Expense, ExpenseInput, Household } from '../types/models';
 import { useAuth } from './useAuth';
@@ -72,7 +72,7 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
     setLoading(true);
     const householdId = profile.householdId;
     const onError = () => {
-      setSyncError('Could not refresh household data. Check your connection.');
+      setSyncError('No se pudieron actualizar los datos. Comprueba tu conexión.');
       setLoading(false);
     };
 
@@ -89,8 +89,19 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
     const categoryUnsubscribe = onSnapshot(
       query(collection(db, 'households', householdId, 'categories'), orderBy('name')),
       (snapshot) => {
-        setCategories(snapshot.docs.map((item) => item.data() as Category));
+        const nextCategories = snapshot.docs.map((item) => item.data() as Category);
+        setCategories(nextCategories);
         setSyncError(null);
+        nextCategories.forEach((category) => {
+          const translatedName = category.isDefault
+            ? DEFAULT_CATEGORY_TRANSLATIONS[category.name]
+            : undefined;
+          if (translatedName) {
+            void updateDoc(itemRef(householdId, category.id), { name: translatedName }).catch(
+              () => undefined,
+            );
+          }
+        });
       },
       onError,
     );
@@ -112,13 +123,13 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
   }, [profile?.householdId, user]);
 
   const requireSession = useCallback(() => {
-    if (!user || !profile) throw new Error('You must be logged in.');
+    if (!user || !profile) throw new Error('Debes iniciar sesión.');
     return { user, profile };
   }, [profile, user]);
 
   const requireHousehold = useCallback(() => {
     const session = requireSession();
-    if (!session.profile.householdId) throw new Error('Create or join a household first.');
+    if (!session.profile.householdId) throw new Error('Primero crea o únete a un hogar.');
     return { ...session, householdId: session.profile.householdId };
   }, [requireSession]);
 
@@ -182,7 +193,7 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
       const inviteRef = doc(db, 'invites', inviteCode);
 
       const inviteSnapshot = await getDoc(inviteRef);
-      if (!inviteSnapshot.exists()) throw new Error('Invite code not found.');
+      if (!inviteSnapshot.exists()) throw new Error('No se encontró el código de invitación.');
 
       const householdId = String(inviteSnapshot.data().householdId);
       const householdRef = doc(db, 'households', householdId);
@@ -237,7 +248,7 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
     async (expense: Expense) => {
       const session = requireHousehold();
       if (expense.createdBy !== session.user.uid) {
-        throw new Error('Only the person who added this expense can delete it.');
+        throw new Error('Solo la persona que añadió este gasto puede eliminarlo.');
       }
       await deleteDoc(doc(db, 'households', session.householdId, 'expenses', expense.id));
     },
@@ -249,7 +260,7 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
       const session = requireHousehold();
       const cleanName = name.trim();
       if (categories.some((item) => item.name.toLowerCase() === cleanName.toLowerCase())) {
-        throw new Error('A category with this name already exists.');
+        throw new Error('Ya existe una categoría con este nombre.');
       }
       const categoryRef = doc(collection(db, 'households', session.householdId, 'categories'));
       await setDoc(categoryRef, {
@@ -269,7 +280,6 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
   const updateCategory = useCallback(
     async (category: Category, name: string, color: string) => {
       const session = requireHousehold();
-      if (category.isDefault) throw new Error('Default categories cannot be edited.');
       await updateDoc(
         doc(db, 'households', session.householdId, 'categories', category.id),
         { name: name.trim(), color },
@@ -281,9 +291,9 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
   const deleteCategory = useCallback(
     async (category: Category) => {
       const session = requireHousehold();
-      if (category.isDefault) throw new Error('Default categories cannot be deleted.');
+      if (category.isDefault) throw new Error('Las categorías predeterminadas no se pueden eliminar.');
       if (expenses.some((expense) => expense.categoryId === category.id)) {
-        throw new Error('Move or delete expenses in this category first.');
+        throw new Error('Primero cambia o elimina los gastos de esta categoría.');
       }
       await deleteDoc(doc(db, 'households', session.householdId, 'categories', category.id));
     },
@@ -328,6 +338,10 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
 
 export function useHousehold() {
   const context = useContext(HouseholdContext);
-  if (!context) throw new Error('useHousehold must be used within HouseholdProvider.');
+  if (!context) throw new Error('El contexto del hogar no está disponible.');
   return context;
+}
+
+function itemRef(householdId: string, categoryId: string) {
+  return doc(db, 'households', householdId, 'categories', categoryId);
 }

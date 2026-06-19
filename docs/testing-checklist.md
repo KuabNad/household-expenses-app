@@ -13,6 +13,9 @@ Use two distinct email addresses. For the best sync test, use two devices.
 - [ ] Confirm the expense appears in Dashboard and Expenses.
 - [ ] Confirm the monthly total, category total, and payer total are correct.
 - [ ] Change the monthly filter backward and forward.
+- [ ] Select months in the annual color calendar and confirm the monthly summary changes.
+- [ ] Confirm heavier-spending months appear redder and lighter months bluer.
+- [ ] Confirm the year-to-date category bars include all elapsed months.
 - [ ] Share the invite code from Settings.
 - [ ] Register account B and join the household with the invite code.
 - [ ] Verify account B sees account A's existing expense.

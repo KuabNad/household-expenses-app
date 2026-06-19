@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { Category, Expense, HouseholdMember } from '../types/models';
 import {
   expensesForMonth,
+  expensesForYearToDate,
+  monthlySpendingForYear,
   spendingByCategory,
   spendingByPayer,
   totalsByCurrency,
@@ -114,5 +116,36 @@ describe('summary helpers', () => {
     expect(spendingByCategory(june, categories)[0].amount).toBe(10);
     expect(spendingByPayer(june, members).map((item) => item.amount)).toEqual([10]);
     expect(expensesForMonth(remaining, '2026-07')).toEqual([]);
+  });
+
+  it('builds a clickable-year data set and year-to-date category source', () => {
+    const months = monthlySpendingForYear(expenses, 2026, '2026-07-15');
+    const yearToDate = expensesForYearToDate(expenses, 2026, '2026-07-15');
+
+    expect(months).toHaveLength(12);
+    expect(months[5]).toMatchObject({
+      month: '2026-06',
+      hasExpenses: true,
+      isFuture: false,
+      totals: { EUR: 52.5 },
+    });
+    expect(months[6]).toMatchObject({
+      month: '2026-07',
+      hasExpenses: true,
+      isFuture: false,
+      totals: { EUR: 42.5 },
+    });
+    expect(months[7]).toMatchObject({
+      month: '2026-08',
+      hasExpenses: true,
+      isFuture: true,
+      totals: { EUR: 42.5 },
+    });
+    expect(yearToDate.map((expense) => expense.date)).toEqual([
+      '2026-05-12',
+      '2026-06-02',
+      '2026-06-12',
+      '2026-07-02',
+    ]);
   });
 });

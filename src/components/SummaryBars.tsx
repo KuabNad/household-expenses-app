@@ -4,7 +4,10 @@ import { formatMoney } from '../utils/format';
 import { colors, radius, spacing } from '../utils/theme';
 
 export function SummaryBars({ items }: { items: SummaryLine[] }) {
-  const maximum = Math.max(...items.map((item) => item.amount), 1);
+  const maxima = items.reduce<Record<string, number>>((result, item) => {
+    result[item.currency] = Math.max(result[item.currency] ?? 1, item.amount);
+    return result;
+  }, {});
 
   return (
     <View style={styles.list}>
@@ -20,7 +23,7 @@ export function SummaryBars({ items }: { items: SummaryLine[] }) {
                 styles.bar,
                 {
                   backgroundColor: item.color ?? colors.chart[index % colors.chart.length],
-                  width: `${Math.max((item.amount / maximum) * 100, 4)}%`,
+                  width: `${Math.max((item.amount / maxima[item.currency]) * 100, 4)}%`,
                 },
               ]}
             />

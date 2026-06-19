@@ -7,10 +7,13 @@ import { MonthSelector } from '../components/MonthSelector';
 import { Notice } from '../components/Notice';
 import { Screen } from '../components/Screen';
 import { SummaryBars } from '../components/SummaryBars';
+import { YearSpendingCalendar } from '../components/YearSpendingCalendar';
 import { useHousehold } from '../hooks/useHousehold';
-import { formatMoney, monthKey } from '../utils/format';
+import { formatMoney, monthKey, toDateInput } from '../utils/format';
 import {
   expensesForMonth,
+  expensesForYearToDate,
+  monthlySpendingForYear,
   spendingByCategory,
   spendingByPayer,
   totalsByCurrency,
@@ -19,8 +22,15 @@ import { colors, radius, spacing } from '../utils/theme';
 
 export function DashboardScreen() {
   const { household, categories, expenses, syncError } = useHousehold();
-  const [selectedMonth, setSelectedMonth] = useState(monthKey(new Date()));
+  const today = useMemo(() => new Date(), []);
+  const currentYear = today.getFullYear();
+  const todayKey = toDateInput(today);
+  const [selectedMonth, setSelectedMonth] = useState(monthKey(today));
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const changeMonth = (month: string) => {
+    setSelectedMonth(month);
+    setSelectedCategoryId(null);
+  };
   const monthlyExpenses = useMemo(
     () => expensesForMonth(expenses, selectedMonth),
     [expenses, selectedMonth],
@@ -53,6 +63,18 @@ export function DashboardScreen() {
     () => totalsByCurrency(recurringMonthlyExpenses),
     [recurringMonthlyExpenses],
   );
+  const yearMonths = useMemo(
+    () => monthlySpendingForYear(expenses, currentYear, todayKey),
+    [currentYear, expenses, todayKey],
+  );
+  const yearToDateExpenses = useMemo(
+    () => expensesForYearToDate(expenses, currentYear, todayKey),
+    [currentYear, expenses, todayKey],
+  );
+  const yearCategoryTotals = useMemo(
+    () => spendingByCategory(yearToDateExpenses, categories),
+    [categories, yearToDateExpenses],
+  );
 
   return (
     <Screen
@@ -60,7 +82,13 @@ export function DashboardScreen() {
       title="Resumen"
     >
       {syncError ? <Notice message={syncError} /> : null}
-      <MonthSelector month={selectedMonth} onChange={setSelectedMonth} />
+      <MonthSelector month={selectedMonth} onChange={changeMonth} />
+      <YearSpendingCalendar
+        months={yearMonths}
+        onSelect={changeMonth}
+        selectedMonth={selectedMonth}
+        year={currentYear}
+      />
 
       <View style={styles.totalCard}>
         <Text style={styles.eyebrow}>
@@ -143,6 +171,17 @@ export function DashboardScreen() {
           </View>
         </>
       )}
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Gastos por categoría · {currentYear} hasta hoy</Text>
+        <Text style={styles.sectionHint}>
+          Incluye todos los meses transcurridos del año y separa las monedas.
+        </Text>
+        {yearCategoryTotals.length ? (
+          <SummaryBars items={yearCategoryTotals} />
+        ) : (
+          <Text style={styles.emptyHint}>Todavía no hay gastos este año.</Text>
+        )}
+      </View>
     </Screen>
   );
 }
@@ -165,6 +204,8 @@ const styles = StyleSheet.create({
   },
   section: { gap: spacing.sm },
   sectionTitle: { color: colors.text, fontSize: 18, fontWeight: '800' },
+  sectionHint: { color: colors.muted, fontSize: 12, lineHeight: 17 },
+  emptyHint: { color: colors.muted, fontSize: 14 },
   subscriptionCard: {
     backgroundColor: '#E8F0EC',
     borderColor: '#C5D8CF',

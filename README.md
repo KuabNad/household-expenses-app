@@ -180,6 +180,7 @@ The manual end-to-end checklist is in [docs/testing-checklist.md](docs/testing-c
 - Invite codes do not expire or rotate in v1.
 - There is no currency conversion; each currency is summarized separately to avoid misleading totals.
 - Recurring expenses support monthly and yearly schedules. They are projected into future monthly views; v1.2 does not create separate Firestore records for every occurrence.
+- The dashboard includes a clickable annual spending heatmap and year-to-date category bars.
 - There are no receipt photos, budgets, exports, push notifications, or password-reset screen yet.
 - EAS and App Store credentials must be configured by the repository owner.
 

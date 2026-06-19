@@ -11,6 +11,8 @@ import {
 } from './summary';
 import { isValidDateInput } from './format';
 import {
+  decodeSpreadsheetText,
+  detectSpreadsheetDelimiter,
   existingExpenseFingerprints,
   parseSpreadsheetRows,
 } from './spreadsheetImport';
@@ -323,5 +325,55 @@ describe('summary helpers', () => {
         currency: 'PLN',
       },
     ]);
+  });
+
+  it('decodes Windows-1250 mBank headers and selects semicolon delimiters', () => {
+    const bytes = new Uint8Array([
+      35, 68, 97, 116, 97, 32, 107, 115, 105, 234, 103, 111, 119, 97, 110, 105, 97,
+      59, 35, 68, 97, 116, 97, 32, 111, 112, 101, 114, 97, 99, 106, 105, 59, 35, 79,
+      112, 105, 115, 32, 111, 112, 101, 114, 97, 99, 106, 105, 59, 35, 84, 121, 116,
+      117, 179, 59, 35, 75, 119, 111, 116, 97, 59,
+    ]);
+    const decoded = decodeSpreadsheetText(bytes);
+
+    expect(decoded).toContain('#Data księgowania');
+    expect(decoded).toContain('#Tytuł');
+    expect(detectSpreadsheetDelimiter(decoded)).toBe(';');
+  });
+
+  it('recognizes mBank even when Polish header characters are distorted', () => {
+    const result = parseSpreadsheetRows(
+      [
+        ['#Waluta', 'PLN'],
+        [
+          '#Data ksiÍgowania',
+          '#Data operacji',
+          '#Opis operacji',
+          '#Tytu≥',
+          '#Nadawca/Odbiorca',
+          '#Numer konta',
+          '#Kwota',
+          '#Saldo po operacji',
+        ],
+        [
+          '2026-03-01',
+          '2026-03-01',
+          'ZAKUP PRZY UŻYCIU KARTY',
+          'MERCADONA',
+          '',
+          '',
+          '-24,03',
+          '95 667,75',
+        ],
+      ],
+      'u1',
+    );
+
+    expect(result.detectedFormat).toBe('mBank Polonia');
+    expect(result.transactions[0]).toMatchObject({
+      type: 'expense',
+      amount: 24.03,
+      currency: 'PLN',
+    });
   });
 });

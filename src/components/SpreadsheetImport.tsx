@@ -11,6 +11,8 @@ import type {
 } from '../types/models';
 import {
   existingExpenseFingerprints,
+  decodeSpreadsheetText,
+  detectSpreadsheetDelimiter,
   parseSpreadsheetRows,
   type ParsedSpreadsheetTransaction,
   type SpreadsheetCell,
@@ -35,15 +37,12 @@ function normalizedName(value: string) {
 async function readPickedFile(asset: DocumentPicker.DocumentPickerAsset) {
   const extension = asset.name.split('.').pop()?.toLowerCase();
   if (extension === 'csv' || extension === 'tsv' || asset.mimeType === 'text/csv') {
-    let text = asset.file ? await asset.file.text() : await new ExpoFile(asset.uri).text();
-    if (text.includes('\uFFFD')) {
-      const bytes = asset.file
-        ? new Uint8Array(await asset.file.arrayBuffer())
-        : await new ExpoFile(asset.uri).bytes();
-      text = new TextDecoder('windows-1250').decode(bytes);
-    }
+    const bytes = asset.file
+      ? new Uint8Array(await asset.file.arrayBuffer())
+      : await new ExpoFile(asset.uri).bytes();
+    const text = decodeSpreadsheetText(bytes);
     const parsed = Papa.parse<(string | number | null)[]>(text.replace(/^\uFEFF/, ''), {
-      delimiter: extension === 'tsv' ? '\t' : '',
+      delimiter: extension === 'tsv' ? '\t' : detectSpreadsheetDelimiter(text),
       skipEmptyLines: 'greedy',
     });
     if (parsed.errors.length && !parsed.data.length) {
@@ -156,6 +155,20 @@ export function SpreadsheetImport({
   const toggleRow = (id: string) => {
     setRows((current) =>
       current.map((row) => (row.id === id ? { ...row, selected: !row.selected } : row)),
+    );
+  };
+
+  const toggleType = (id: string) => {
+    setRows((current) =>
+      current.map((row) => {
+        if (row.id !== id) return row;
+        const type = row.type === 'expense' ? 'income' : 'expense';
+        return {
+          ...row,
+          type,
+          categoryId: type === 'expense' ? row.categoryId ?? otherCategory?.id : undefined,
+        };
+      }),
     );
   };
 
@@ -307,10 +320,19 @@ export function SpreadsheetImport({
                     </Text>
                   </Pressable>
                   {row.type === 'expense' && row.selected ? (
-                    <Pressable onPress={() => cycleCategory(row.id)} style={styles.category}>
-                      <Text style={styles.categoryText}>
-                        Categoría: {category?.name ?? 'Seleccionar'} · tocar para cambiar
-                      </Text>
+                    <View style={styles.rowActions}>
+                      <Pressable onPress={() => toggleType(row.id)} style={styles.typeButton}>
+                        <Text style={styles.typeText}>Tipo: Gasto · tocar para cambiar</Text>
+                      </Pressable>
+                      <Pressable onPress={() => cycleCategory(row.id)} style={styles.category}>
+                        <Text style={styles.categoryText}>
+                          Categoría: {category?.name ?? 'Seleccionar'} · tocar para cambiar
+                        </Text>
+                      </Pressable>
+                    </View>
+                  ) : row.selected ? (
+                    <Pressable onPress={() => toggleType(row.id)} style={styles.typeButton}>
+                      <Text style={styles.typeText}>Tipo: Ingreso · tocar para cambiar</Text>
                     </Pressable>
                   ) : null}
                 </View>
@@ -400,4 +422,13 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   categoryText: { color: colors.primary, fontSize: 10, fontWeight: '800' },
+  rowActions: { alignItems: 'flex-start', gap: spacing.xs },
+  typeButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#EEF0F7',
+    borderRadius: 14,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 5,
+  },
+  typeText: { color: '#4E5878', fontSize: 10, fontWeight: '800' },
 });

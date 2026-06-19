@@ -23,6 +23,26 @@ export interface SpreadsheetParseResult {
 
 export type SpreadsheetCell = string | number | boolean | Date | null | undefined;
 
+export function decodeSpreadsheetText(bytes: Uint8Array) {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    return new TextDecoder('windows-1250').decode(bytes);
+  }
+}
+
+export function detectSpreadsheetDelimiter(text: string) {
+  const lines = text.split(/\r?\n/).slice(0, 60);
+  const maximum = {
+    semicolon: Math.max(...lines.map((line) => (line.match(/;/g) ?? []).length), 0),
+    comma: Math.max(...lines.map((line) => (line.match(/,/g) ?? []).length), 0),
+    tab: Math.max(...lines.map((line) => (line.match(/\t/g) ?? []).length), 0),
+  };
+  if (maximum.tab >= 2 && maximum.tab > maximum.semicolon) return '\t';
+  if (maximum.semicolon >= 2 && maximum.semicolon >= maximum.comma) return ';';
+  return ',';
+}
+
 const HEADER_ALIASES = {
   date: ['fecha', 'date', 'data', 'datum', 'transactiondate', 'operationdate', 'valuedate'],
   description: [
@@ -244,9 +264,14 @@ function parseSpanishBankRows(rows: SpreadsheetCell[][], userId: string) {
 }
 
 function parseMbankRows(rows: SpreadsheetCell[][], userId: string) {
-  const headerIndex = rows.findIndex((row) =>
-    row.map(stripHash).some((cell) => normalize(cell) === 'dataksiegowania'),
-  );
+  const headerIndex = rows.findIndex((row) => {
+    const cells = row.map((cell) => normalize(stripHash(cell)));
+    return (
+      cells.includes('dataoperacji') &&
+      cells.includes('opisoperacji') &&
+      cells.includes('kwota')
+    );
+  });
   if (headerIndex < 0) {
     return {
       transactions: [],
@@ -296,7 +321,7 @@ export function detectSpreadsheetFormat(rows: SpreadsheetCell[][]) {
     .flat()
     .map((cell) => normalize(stripHash(cell)));
   if (
-    firstCells.includes('dataksiegowania') &&
+    firstCells.includes('dataoperacji') &&
     firstCells.includes('opisoperacji') &&
     firstCells.includes('kwota')
   ) {

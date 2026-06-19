@@ -66,7 +66,7 @@ export function SettingsScreen() {
       </View>
 
       <AppButton label="Cerrar sesión" onPress={logout} variant="danger" />
-      <Text style={styles.version}>Gastos del hogar v1.6.0</Text>
+      <Text style={styles.version}>Gastos del hogar v1.6.1</Text>
     </Screen>
   );
 }

@@ -19,6 +19,8 @@ The same codebase also runs as a web app on GitHub Pages. See [docs/web-deployme
 - Editable expense dates on web and mobile
 - Editable names for default and custom categories
 - Interactive category pie chart that filters totals, payer summaries, and expenses
+- Category deletion can either delete its expenses or move them safely to “Otros”
+- Calendar date selector for adding and editing expenses
 - Loading, empty, validation, and network-error states
 - Firebase Authentication persistence on iPhone
 - Deployable Firestore security rules
@@ -182,7 +184,8 @@ The manual end-to-end checklist is in [docs/testing-checklist.md](docs/testing-c
 
 ## Updating Firestore rules
 
-Version 1.1 allows household members to rename default categories. Replace the
+Version 1.1.1 allows household members to rename default categories and safely
+resolve expenses when deleting a custom category. Replace the
 rules in Firebase Console with the current [`firebase.rules`](firebase.rules)
 file and publish them before using that feature.
 

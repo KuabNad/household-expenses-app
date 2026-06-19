@@ -39,7 +39,10 @@ interface HouseholdContextValue {
   deleteExpense: (expense: Expense) => Promise<void>;
   addCategory: (name: string, color: string) => Promise<void>;
   updateCategory: (category: Category, name: string, color: string) => Promise<void>;
-  deleteCategory: (category: Category) => Promise<void>;
+  deleteCategory: (
+    category: Category,
+    expenseAction?: 'delete-expenses' | 'move-to-other',
+  ) => Promise<void>;
 }
 
 const HouseholdContext = createContext<HouseholdContextValue | undefined>(undefined);
@@ -289,15 +292,60 @@ export function HouseholdProvider({ children }: PropsWithChildren) {
   );
 
   const deleteCategory = useCallback(
-    async (category: Category) => {
+    async (
+      category: Category,
+      expenseAction?: 'delete-expenses' | 'move-to-other',
+    ) => {
       const session = requireHousehold();
       if (category.isDefault) throw new Error('Las categorías predeterminadas no se pueden eliminar.');
-      if (expenses.some((expense) => expense.categoryId === category.id)) {
-        throw new Error('Primero cambia o elimina los gastos de esta categoría.');
+      const categoryExpenses = expenses.filter((expense) => expense.categoryId === category.id);
+
+      if (categoryExpenses.length > 450) {
+        throw new Error(
+          'Esta categoría tiene demasiados gastos para eliminarlos de una vez. Contacta con soporte.',
+        );
       }
-      await deleteDoc(doc(db, 'households', session.householdId, 'categories', category.id));
+
+      if (categoryExpenses.length && !expenseAction) {
+        throw new Error('Elige qué hacer con los gastos de esta categoría.');
+      }
+
+      const otherCategory =
+        categories.find(
+          (item) => item.isDefault && item.icon === 'ellipsis-horizontal-outline',
+        ) ??
+        categories.find(
+          (item) =>
+            item.isDefault &&
+            ['otros', 'other'].includes(item.name.trim().toLocaleLowerCase('es')),
+        );
+
+      if (expenseAction === 'move-to-other' && !otherCategory) {
+        throw new Error('No se encontró la categoría “Otros”.');
+      }
+
+      const batch = writeBatch(db);
+      categoryExpenses.forEach((expense) => {
+        const expenseRef = doc(
+          db,
+          'households',
+          session.householdId,
+          'expenses',
+          expense.id,
+        );
+        if (expenseAction === 'delete-expenses') {
+          batch.delete(expenseRef);
+        } else if (expenseAction === 'move-to-other' && otherCategory) {
+          batch.update(expenseRef, {
+            categoryId: otherCategory.id,
+            updatedAt: serverTimestamp(),
+          });
+        }
+      });
+      batch.delete(doc(db, 'households', session.householdId, 'categories', category.id));
+      await batch.commit();
     },
-    [expenses, requireHousehold],
+    [categories, expenses, requireHousehold],
   );
 
   const value = useMemo<HouseholdContextValue>(

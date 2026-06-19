@@ -86,21 +86,39 @@ service cloud.firestore {
           && request.resource.data.amount is number
           && request.resource.data.amount > 0;
         allow update: if isMember(householdId)
-          && resource.data.createdBy == request.auth.uid
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'amount',
-            'currency',
-            'date',
-            'categoryId',
-            'description',
-            'paidByUserId',
-            'paymentMethod',
-            'updatedAt'
-          ])
-          && request.resource.data.amount is number
-          && request.resource.data.amount > 0;
+          && (
+            (
+              resource.data.createdBy == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'amount',
+                'currency',
+                'date',
+                'categoryId',
+                'description',
+                'paidByUserId',
+                'paymentMethod',
+                'updatedAt'
+              ])
+              && request.resource.data.amount is number
+              && request.resource.data.amount > 0
+            ) || (
+              request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['categoryId', 'updatedAt'])
+              && !existsAfter(
+                /databases/$(database)/documents/households/$(householdId)/categories/$(resource.data.categoryId)
+              )
+              && existsAfter(
+                /databases/$(database)/documents/households/$(householdId)/categories/$(request.resource.data.categoryId)
+              )
+            )
+          );
         allow delete: if isMember(householdId)
-          && resource.data.createdBy == request.auth.uid;
+          && (
+            resource.data.createdBy == request.auth.uid
+            || !existsAfter(
+              /databases/$(database)/documents/households/$(householdId)/categories/$(resource.data.categoryId)
+            )
+          );
       }
 
       match /categories/{categoryId} {

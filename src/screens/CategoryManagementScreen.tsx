@@ -14,7 +14,8 @@ import { colors, radius, spacing } from '../utils/theme';
 const COLORS = ['#315C4C', '#D28B5C', '#6F8FA6', '#A16E83', '#7D9363', '#C5A53D'];
 
 export function CategoryManagementScreen() {
-  const { categories, addCategory, updateCategory, deleteCategory, syncError } = useHousehold();
+  const { categories, expenses, addCategory, updateCategory, deleteCategory, syncError } =
+    useHousehold();
   const [editing, setEditing] = useState<Category | null>(null);
   const [name, setName] = useState('');
   const [color, setColor] = useState(COLORS[0]);
@@ -50,11 +51,11 @@ export function CategoryManagementScreen() {
     setColor(category.color ?? COLORS[0]);
   };
 
-  const remove = async () => {
+  const remove = async (expenseAction?: 'delete-expenses' | 'move-to-other') => {
     if (!pendingDelete) return;
     try {
       setLoading(true);
-      await deleteCategory(pendingDelete);
+      await deleteCategory(pendingDelete, expenseAction);
       setPendingDelete(null);
     } catch (error) {
       Alert.alert('No se pudo eliminar la categoría', friendlyError(error));
@@ -62,6 +63,10 @@ export function CategoryManagementScreen() {
       setLoading(false);
     }
   };
+
+  const pendingExpenseCount = pendingDelete
+    ? expenses.filter((expense) => expense.categoryId === pendingDelete.id).length
+    : 0;
 
   return (
     <Screen
@@ -129,21 +134,43 @@ export function CategoryManagementScreen() {
         <View style={styles.confirmCard}>
           <Text style={styles.confirmTitle}>¿Eliminar “{pendingDelete.name}”?</Text>
           <Text style={styles.confirmText}>
-            La categoría se eliminará de forma permanente. No puede contener gastos.
+            {pendingExpenseCount
+              ? `Esta categoría contiene ${pendingExpenseCount} ${
+                  pendingExpenseCount === 1 ? 'gasto' : 'gastos'
+                }. Elige qué quieres hacer.`
+              : 'Esta categoría no contiene gastos y se puede eliminar de forma segura.'}
           </Text>
-          <View style={styles.actions}>
+          {pendingExpenseCount ? (
+            <>
+              <AppButton
+                label={`Mover ${pendingExpenseCount === 1 ? 'el gasto' : 'los gastos'} a Otros`}
+                loading={loading}
+                onPress={() => remove('move-to-other')}
+                variant="secondary"
+              />
+              <AppButton
+                label={`Eliminar categoría y ${
+                  pendingExpenseCount === 1 ? 'gasto' : 'gastos'
+                }`}
+                loading={loading}
+                onPress={() => remove('delete-expenses')}
+                variant="danger"
+              />
+            </>
+          ) : (
+            <AppButton
+              label="Eliminar categoría"
+              loading={loading}
+              onPress={() => remove()}
+              variant="danger"
+            />
+          )}
+          <View style={styles.cancelRow}>
             <AppButton
               label="Cancelar"
               onPress={() => setPendingDelete(null)}
-              style={styles.action}
-              variant="secondary"
-            />
-            <AppButton
-              label="Eliminar"
-              loading={loading}
-              onPress={remove}
-              style={styles.action}
-              variant="danger"
+              style={styles.cancelButton}
+              variant="text"
             />
           </View>
         </View>
@@ -186,4 +213,6 @@ const styles = StyleSheet.create({
   },
   confirmTitle: { color: colors.danger, fontSize: 18, fontWeight: '800' },
   confirmText: { color: colors.text, lineHeight: 20 },
+  cancelRow: { alignItems: 'center' },
+  cancelButton: { minWidth: 140 },
 });

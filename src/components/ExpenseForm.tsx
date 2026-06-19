@@ -1,5 +1,6 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useMemo, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Category, Currency, ExpenseInput, Household } from '../types/models';
 import { useAuth } from '../hooks/useAuth';
@@ -52,6 +53,7 @@ export function ExpenseForm({
   onSubmit,
 }: ExpenseFormProps) {
   const { user } = useAuth();
+  const webDateRef = useRef<TextInput>(null);
   const [amount, setAmount] = useState(initial ? String(initial.amount) : '');
   const [currency, setCurrency] = useState<Currency>(initial?.currency ?? 'EUR');
   const [date, setDate] = useState(initial?.date ?? toDateInput(new Date()));
@@ -127,16 +129,32 @@ export function ExpenseForm({
       <View style={styles.field}>
         <Text style={styles.label}>Fecha</Text>
         {Platform.OS === 'web' ? (
-          <TextInput
-            accessibilityLabel="Fecha"
-            onChangeText={setDate}
-            style={styles.dateButton}
-            value={date}
-            {...({ type: 'date', max: toDateInput(new Date()) } as object)}
-          />
+          <View style={styles.webDateControl}>
+            <TextInput
+              accessibilityLabel="Fecha"
+              onChangeText={setDate}
+              ref={webDateRef}
+              style={styles.webDateInput}
+              value={date}
+              {...({ type: 'date', max: toDateInput(new Date()) } as object)}
+            />
+            <Pressable
+              accessibilityLabel="Abrir calendario"
+              hitSlop={8}
+              onPress={() => {
+                const input = webDateRef.current as TextInput & { showPicker?: () => void };
+                input?.focus();
+                input?.showPicker?.();
+              }}
+              style={styles.calendarButton}
+            >
+              <Ionicons color={colors.primary} name="calendar-outline" size={23} />
+            </Pressable>
+          </View>
         ) : (
           <Pressable onPress={() => setShowDate((value) => !value)} style={styles.dateButton}>
             <Text style={styles.dateText}>{date}</Text>
+            <Ionicons color={colors.primary} name="calendar-outline" size={23} />
           </Pressable>
         )}
         {showDate && Platform.OS !== 'web' ? (
@@ -221,15 +239,43 @@ const styles = StyleSheet.create({
   choiceText: { color: colors.text, fontSize: 13, fontWeight: '600' },
   choiceSelected: { color: colors.white },
   dateButton: {
+    alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: radius.md,
     borderWidth: 1,
     minHeight: 50,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     color: colors.text,
     fontSize: 16,
+  },
+  webDateControl: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    flexDirection: 'row',
+    minHeight: 50,
+    overflow: 'hidden',
+  },
+  webDateInput: {
+    borderWidth: 0,
+    color: colors.text,
+    flex: 1,
+    fontSize: 16,
+    minHeight: 48,
+    paddingHorizontal: spacing.md,
+  },
+  calendarButton: {
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    borderLeftColor: colors.border,
+    borderLeftWidth: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
   },
   dateText: { color: colors.text, fontSize: 16 },
   error: { color: colors.danger, fontSize: 14 },

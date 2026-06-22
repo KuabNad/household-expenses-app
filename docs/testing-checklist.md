@@ -62,3 +62,7 @@ npm test
 - [ ] Reload the browser and confirm all local data remains.
 - [ ] Disconnect the Mac from the internet and confirm the app still starts and works.
 - [ ] Import a CSV and an Excel `.xlsx` file while offline.
+- [ ] Add a second local member in Ajustes without creating a login.
+- [ ] Add a manual expense paid by the second member.
+- [ ] Import a bank table for the second member.
+- [ ] Save monthly income for both local members and verify separate savings totals.

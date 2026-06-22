@@ -104,6 +104,34 @@ export function LocalHouseholdProvider({ children }: PropsWithChildren) {
     }));
   }, []);
 
+  const addMember = useCallback(async (displayName: string) => {
+    const cleanName = displayName.trim();
+    if (cleanName.length < 2) throw new Error('Introduce al menos 2 caracteres.');
+    if (
+      Object.values(data.household.members).some(
+        (member) => member.displayName.toLowerCase() === cleanName.toLowerCase(),
+      )
+    ) {
+      throw new Error('Ya existe una persona con este nombre.');
+    }
+    const memberId = id('member');
+    setData((current) => ({
+      ...current,
+      household: {
+        ...current.household,
+        members: {
+          ...current.household.members,
+          [memberId]: {
+            email: '',
+            displayName: cleanName,
+            joinedAt: null,
+          },
+        },
+        memberIds: [...current.household.memberIds, memberId],
+      },
+    }));
+  }, [data.household.members]);
+
   const addExpense = useCallback(
     async (input: ExpenseInput) => {
       const now = null;
@@ -150,17 +178,24 @@ export function LocalHouseholdProvider({ children }: PropsWithChildren) {
   }, []);
 
   const saveMonthlyIncome = useCallback(
-    async (month: string, amount: number, currency: Currency) => {
+    async (
+      month: string,
+      amount: number,
+      currency: Currency,
+      targetUserId = userId,
+    ) => {
       if (!Number.isFinite(amount) || amount < 0) throw new Error('Introduce un ingreso válido.');
       setData((current) => {
         const existing = current.monthlyIncomes.find(
           (income) =>
-            income.month === month && income.userId === userId && income.currency === currency,
+            income.month === month &&
+            income.userId === targetUserId &&
+            income.currency === currency,
         );
         const next: MonthlyIncome = {
-          id: existing?.id ?? `${month}_${userId}_${currency}`,
+          id: existing?.id ?? `${month}_${targetUserId}_${currency}`,
           householdId: HOUSEHOLD_ID,
-          userId,
+          userId: targetUserId,
           month,
           amount: Math.round(amount * 100) / 100,
           currency,
@@ -179,7 +214,7 @@ export function LocalHouseholdProvider({ children }: PropsWithChildren) {
   );
 
   const importSpreadsheetTransactions = useCallback(
-    async (transactions: SpreadsheetTransactionImport[]) => {
+    async (transactions: SpreadsheetTransactionImport[], targetUserId = userId) => {
       if (!transactions.length) throw new Error('No hay movimientos seleccionados.');
       const expenseRows = transactions.filter((item) => item.type === 'expense');
       const incomeGroups = new Map<string, { month: string; currency: Currency; amount: number }>();
@@ -205,7 +240,7 @@ export function LocalHouseholdProvider({ children }: PropsWithChildren) {
           date: item.date,
           categoryId: item.categoryId,
           description: item.description.trim(),
-          paidByUserId: userId,
+          paidByUserId: targetUserId,
           paymentMethod: 'Importación bancaria',
           isRecurring: false,
           importFingerprint: item.fingerprint,
@@ -218,12 +253,14 @@ export function LocalHouseholdProvider({ children }: PropsWithChildren) {
         incomeGroups.forEach(({ month, currency, amount }) => {
           const existing = incomes.find(
             (income) =>
-              income.month === month && income.userId === userId && income.currency === currency,
+              income.month === month &&
+              income.userId === targetUserId &&
+              income.currency === currency,
           );
           const next: MonthlyIncome = {
-            id: existing?.id ?? `${month}_${userId}_${currency}`,
+            id: existing?.id ?? `${month}_${targetUserId}_${currency}`,
             householdId: HOUSEHOLD_ID,
-            userId,
+            userId: targetUserId,
             month,
             amount: Math.round(amount * 100) / 100,
             currency,
@@ -323,6 +360,7 @@ export function LocalHouseholdProvider({ children }: PropsWithChildren) {
       joinHousehold: async () => {
         throw new Error('Las invitaciones no están disponibles en el modo local.');
       },
+      addMember,
       addExpense,
       updateExpense,
       deleteExpense,
@@ -335,6 +373,7 @@ export function LocalHouseholdProvider({ children }: PropsWithChildren) {
     [
       addCategory,
       addExpense,
+      addMember,
       createHousehold,
       data,
       deleteCategory,

@@ -7,6 +7,7 @@ import type {
   Category,
   Currency,
   Expense,
+  HouseholdMember,
   SpreadsheetTransactionImport,
 } from '../types/models';
 import {
@@ -62,16 +63,21 @@ async function readPickedFile(asset: DocumentPicker.DocumentPickerAsset) {
 }
 
 export function SpreadsheetImport({
+  allowMemberSelection = false,
   categories,
   currentUserId,
   expenses,
+  members,
   onImport,
 }: {
+  allowMemberSelection?: boolean;
   categories: Category[];
   currentUserId: string;
   expenses: Expense[];
+  members?: Record<string, HouseholdMember>;
   onImport: (
     transactions: SpreadsheetTransactionImport[],
+    userId?: string,
   ) => Promise<{ expenses: number; incomeMonths: number }>;
 }) {
   const [open, setOpen] = useState(false);
@@ -80,9 +86,11 @@ export function SpreadsheetImport({
   const [detectedFormat, setDetectedFormat] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [importUserId, setImportUserId] = useState(currentUserId);
+  const importMembers = allowMemberSelection ? Object.entries(members ?? {}) : [];
   const duplicateFingerprints = useMemo(
-    () => existingExpenseFingerprints(expenses, currentUserId),
-    [currentUserId, expenses],
+    () => existingExpenseFingerprints(expenses, importUserId),
+    [expenses, importUserId],
   );
   const otherCategory =
     categories.find((category) => normalizedName(category.name) === 'otros') ??
@@ -115,7 +123,7 @@ export function SpreadsheetImport({
           }
         }
       }
-      const parsed = parseSpreadsheetRows(table, currentUserId);
+      const parsed = parseSpreadsheetRows(table, importUserId);
       const categoryMap = new Map(
         categories.map((category) => [normalizedName(category.name), category.id]),
       );
@@ -218,6 +226,7 @@ export function SpreadsheetImport({
                 fingerprint: row.fingerprint,
               },
         ),
+        importUserId,
       );
       setRows([]);
       setErrors([]);
@@ -260,6 +269,38 @@ export function SpreadsheetImport({
         Usa importes negativos para gastos y positivos para ingresos, o escribe
         “gasto/ingreso” en Tipo.
       </Text>
+      {importMembers.length > 1 ? (
+        <View style={styles.memberPicker}>
+          <Text style={styles.memberPickerLabel}>Importar para</Text>
+          <View style={styles.memberChoices}>
+            {importMembers.map(([id, member]) => (
+              <Pressable
+                key={id}
+                onPress={() => {
+                  setImportUserId(id);
+                  setRows([]);
+                  setFileName('');
+                  setDetectedFormat('');
+                  setErrors([]);
+                }}
+                style={[
+                  styles.memberChoice,
+                  importUserId === id && styles.memberChoiceSelected,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.memberChoiceText,
+                    importUserId === id && styles.memberChoiceTextSelected,
+                  ]}
+                >
+                  {member.displayName}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
       <AppButton
         label={fileName ? 'Elegir otro archivo' : 'Elegir CSV o Excel (.xlsx)'}
         loading={loading && !rows.length}
@@ -385,6 +426,20 @@ const styles = StyleSheet.create({
   detectedFormat: { color: colors.muted, fontSize: 12, fontWeight: '700' },
   error: { color: colors.danger, fontSize: 13 },
   reviewHeader: { gap: 3 },
+  memberPicker: { gap: spacing.xs },
+  memberPickerLabel: { color: colors.text, fontSize: 13, fontWeight: '800' },
+  memberChoices: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  memberChoice: {
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  memberChoiceSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  memberChoiceText: { color: colors.text, fontSize: 12, fontWeight: '700' },
+  memberChoiceTextSelected: { color: colors.white },
   reviewTitle: { color: colors.text, fontSize: 15, fontWeight: '800' },
   reviewNote: { color: colors.warning, fontSize: 11, lineHeight: 16 },
   rows: { gap: spacing.sm },

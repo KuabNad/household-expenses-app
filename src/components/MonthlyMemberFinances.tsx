@@ -21,16 +21,19 @@ export function MonthlyMemberFinances({
   members,
   month,
   onSave,
+  canEditAllMembers = false,
 }: {
   currentUserId?: string;
   expenses: Expense[];
   incomes: MonthlyIncome[];
   members: Record<string, HouseholdMember>;
   month: string;
-  onSave: (amount: number, currency: Currency) => Promise<void>;
+  onSave: (amount: number, currency: Currency, userId?: string) => Promise<void>;
+  canEditAllMembers?: boolean;
 }) {
+  const [incomeUserId, setIncomeUserId] = useState(currentUserId);
   const ownIncome = incomes.find(
-    (income) => income.month === month && income.userId === currentUserId,
+    (income) => income.month === month && income.userId === incomeUserId,
   );
   const [amount, setAmount] = useState(ownIncome ? String(ownIncome.amount) : '');
   const [currency, setCurrency] = useState<Currency>(ownIncome?.currency ?? 'EUR');
@@ -43,7 +46,7 @@ export function MonthlyMemberFinances({
     setCurrency(ownIncome?.currency ?? 'EUR');
     setEditing(!ownIncome);
     setMessage('');
-  }, [month, ownIncome?.amount, ownIncome?.currency]);
+  }, [incomeUserId, month, ownIncome?.amount, ownIncome?.currency]);
 
   const memberSummaries = useMemo(
     () => monthlyFinancesByMember(expenses, incomes, members, month),
@@ -59,7 +62,7 @@ export function MonthlyMemberFinances({
     try {
       setLoading(true);
       setMessage('');
-      await onSave(parsed, currency);
+      await onSave(parsed, currency, incomeUserId);
       setEditing(false);
       setMessage('Ingreso mensual guardado.');
     } catch {
@@ -80,7 +83,7 @@ export function MonthlyMemberFinances({
         </View>
         {!editing ? (
           <AppButton
-            label="Editar mi ingreso"
+            label={canEditAllMembers ? 'Editar ingreso' : 'Editar mi ingreso'}
             onPress={() => setEditing(true)}
             style={styles.editButton}
             variant="secondary"
@@ -90,9 +93,25 @@ export function MonthlyMemberFinances({
 
       {editing ? (
         <View style={styles.editor}>
+          {canEditAllMembers ? (
+            <View style={styles.personField}>
+              <Text style={styles.personLabel}>Ingreso de</Text>
+              <View style={styles.currencyRow}>
+                {Object.entries(members).map(([id, member]) => (
+                  <AppButton
+                    key={id}
+                    label={member.displayName}
+                    onPress={() => setIncomeUserId(id)}
+                    style={styles.personButton}
+                    variant={incomeUserId === id ? 'primary' : 'secondary'}
+                  />
+                ))}
+              </View>
+            </View>
+          ) : null}
           <AppInput
             keyboardType="decimal-pad"
-            label="Mi ingreso mensual"
+            label={canEditAllMembers ? 'Ingreso mensual' : 'Mi ingreso mensual'}
             onChangeText={setAmount}
             placeholder="0.00"
             value={amount}
@@ -108,7 +127,11 @@ export function MonthlyMemberFinances({
               />
             ))}
           </View>
-          <AppButton label="Guardar mi ingreso" loading={loading} onPress={submit} />
+          <AppButton
+            label={canEditAllMembers ? 'Guardar ingreso' : 'Guardar mi ingreso'}
+            loading={loading}
+            onPress={submit}
+          />
         </View>
       ) : null}
       {message ? <Text style={styles.message}>{message}</Text> : null}
@@ -187,6 +210,9 @@ const styles = StyleSheet.create({
   },
   currencyRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   currencyButton: { minHeight: 38, paddingHorizontal: spacing.sm },
+  personField: { gap: spacing.xs },
+  personLabel: { color: colors.text, fontSize: 13, fontWeight: '800' },
+  personButton: { minHeight: 38, paddingHorizontal: spacing.sm },
   message: { color: colors.primary, fontSize: 13, fontWeight: '700' },
   memberList: { gap: spacing.sm },
   memberCard: {

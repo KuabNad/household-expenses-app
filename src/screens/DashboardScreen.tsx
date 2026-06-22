@@ -11,6 +11,7 @@ import { SummaryBars } from '../components/SummaryBars';
 import { YearSpendingCalendar } from '../components/YearSpendingCalendar';
 import { useHousehold } from '../hooks/useHousehold';
 import { useAuth } from '../hooks/useAuth';
+import { isLocalMode } from '../services/runtime';
 import { formatMoney, monthKey, toDateInput } from '../utils/format';
 import {
   expensesForMonth,
@@ -124,7 +125,10 @@ export function DashboardScreen() {
           incomes={monthlyIncomes}
           members={household.members}
           month={selectedMonth}
-          onSave={(amount, currency) => saveMonthlyIncome(selectedMonth, amount, currency)}
+          canEditAllMembers={isLocalMode}
+          onSave={(amount, currency, userId) =>
+            saveMonthlyIncome(selectedMonth, amount, currency, userId)
+          }
         />
       ) : null}
 

@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 import { Alert, Share, StyleSheet, Text, View } from 'react-native';
 import { AppButton } from '../components/AppButton';
+import { AppInput } from '../components/AppInput';
 import { Notice } from '../components/Notice';
 import { Screen } from '../components/Screen';
 import { useAuth } from '../hooks/useAuth';
@@ -11,7 +13,9 @@ import { colors, radius, spacing } from '../utils/theme';
 
 export function SettingsScreen() {
   const { profile, logout } = useAuth();
-  const { household, syncError } = useHousehold();
+  const { household, addMember, syncError } = useHousehold();
+  const [memberName, setMemberName] = useState('');
+  const [memberLoading, setMemberLoading] = useState(false);
 
   const shareInvite = async () => {
     if (!household) return;
@@ -79,6 +83,38 @@ export function SettingsScreen() {
 
       <View style={styles.card}>
         <Text style={styles.eyebrow}>MIEMBROS</Text>
+        {isLocalMode ? (
+          <View style={styles.memberForm}>
+            <AppInput
+              autoCapitalize="words"
+              label="Añadir persona"
+              onChangeText={setMemberName}
+              placeholder="Laura"
+              value={memberName}
+            />
+            <AppButton
+              label="Añadir al hogar"
+              loading={memberLoading}
+              onPress={() => {
+                void (async () => {
+                  try {
+                    setMemberLoading(true);
+                    await addMember(memberName);
+                    setMemberName('');
+                  } catch (error) {
+                    Alert.alert(
+                      'No se pudo añadir la persona',
+                      error instanceof Error ? error.message : 'Error desconocido.',
+                    );
+                  } finally {
+                    setMemberLoading(false);
+                  }
+                })();
+              }}
+              variant="secondary"
+            />
+          </View>
+        ) : null}
         {Object.entries(household?.members ?? {}).map(([id, member]) => (
           <View key={id} style={styles.member}>
             <View style={styles.avatar}>
@@ -86,7 +122,7 @@ export function SettingsScreen() {
             </View>
             <View style={styles.memberText}>
               <Text style={styles.memberName}>{member.displayName}</Text>
-              <Text style={styles.memberEmail}>{member.email}</Text>
+              {member.email ? <Text style={styles.memberEmail}>{member.email}</Text> : null}
             </View>
             {id === household?.createdBy ? (
               <View style={styles.ownerBadge}>
@@ -113,7 +149,7 @@ export function SettingsScreen() {
 
       {!isLocalMode ? <AppButton label="Cerrar sesión" onPress={logout} variant="danger" /> : null}
       <Text style={styles.version}>
-        Gastos del hogar v1.7.0 {isLocalMode ? '· Mac local' : ''}
+        Gastos del hogar v1.7.1 {isLocalMode ? '· Mac local' : ''}
       </Text>
     </Screen>
   );
@@ -137,6 +173,12 @@ const styles = StyleSheet.create({
   },
   code: { color: colors.primary, fontSize: 25, fontWeight: '900', letterSpacing: 5 },
   member: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
+  memberForm: {
+    backgroundColor: colors.background,
+    borderRadius: radius.md,
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
   avatar: {
     alignItems: 'center',
     backgroundColor: colors.primaryLight,

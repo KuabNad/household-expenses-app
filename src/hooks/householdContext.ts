@@ -18,12 +18,19 @@ export interface HouseholdContextValue {
   syncError: string | null;
   createHousehold: (name: string) => Promise<void>;
   joinHousehold: (inviteCode: string) => Promise<void>;
+  addMember: (displayName: string) => Promise<void>;
   addExpense: (input: ExpenseInput) => Promise<void>;
   updateExpense: (id: string, input: ExpenseInput) => Promise<void>;
   deleteExpense: (expense: Expense) => Promise<void>;
-  saveMonthlyIncome: (month: string, amount: number, currency: Currency) => Promise<void>;
+  saveMonthlyIncome: (
+    month: string,
+    amount: number,
+    currency: Currency,
+    userId?: string,
+  ) => Promise<void>;
   importSpreadsheetTransactions: (
     transactions: SpreadsheetTransactionImport[],
+    userId?: string,
   ) => Promise<{ expenses: number; incomeMonths: number }>;
   addCategory: (name: string, color: string) => Promise<void>;
   updateCategory: (category: Category, name: string, color: string) => Promise<void>;

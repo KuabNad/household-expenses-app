@@ -9,6 +9,7 @@ import { SpreadsheetImport } from '../components/SpreadsheetImport';
 import { useAuth } from '../hooks/useAuth';
 import { useHousehold } from '../hooks/useHousehold';
 import { friendlyError } from '../services/errors';
+import { isLocalMode } from '../services/runtime';
 import type { MainTabParamList } from '../types/navigation';
 import type { ExpenseInput } from '../types/models';
 
@@ -58,9 +59,11 @@ export function AddExpenseScreen({ navigation }: Props) {
         <>
           {user ? (
             <SpreadsheetImport
+              allowMemberSelection={isLocalMode}
               categories={categories}
               currentUserId={user.uid}
               expenses={expenses}
+              members={household.members}
               onImport={importSpreadsheetTransactions}
             />
           ) : null}

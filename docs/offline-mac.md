@@ -2,6 +2,10 @@
 
 This edition stores all household data locally on one Mac and works without Firebase or an internet connection.
 
+Local members do not need accounts. Add them in **Ajustes → Miembros**, then choose
+who paid when adding a manual expense or importing a bank table. Monthly income
+can also be entered separately for every local member.
+
 ## First-time setup
 
 An internet connection is required only to download the project dependencies once:

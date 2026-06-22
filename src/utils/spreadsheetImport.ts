@@ -469,7 +469,7 @@ export function parseSpreadsheetRows(
 export function existingExpenseFingerprints(expenses: Expense[], userId: string) {
   return new Set(
     expenses
-      .filter((expense) => expense.createdBy === userId)
+      .filter((expense) => expense.paidByUserId === userId)
       .map(
         (expense) =>
           expense.importFingerprint ??

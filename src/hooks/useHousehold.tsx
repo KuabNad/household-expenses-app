@@ -508,6 +508,9 @@ function FirebaseHouseholdProvider({ children }: PropsWithChildren) {
       syncError,
       createHousehold,
       joinHousehold,
+      addMember: async () => {
+        throw new Error('Los miembros online deben unirse mediante un código de invitación.');
+      },
       addExpense,
       updateExpense,
       deleteExpense,

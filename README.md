@@ -129,7 +129,9 @@ See [docs/web-deployment.md](docs/web-deployment.md) for the complete deployment
 
 The repository also includes a local-only Mac edition. It keeps expenses,
 categories, recurring items, income/savings, dashboards, and CSV/Excel imports,
-but does not use Firebase or synchronize with other devices.
+but does not use Firebase or synchronize with other devices. You can create
+multiple local household members without logins and assign expenses, bank
+imports, and monthly income to each person.
 
 ```bash
 npm install

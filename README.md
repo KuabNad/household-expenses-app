@@ -125,6 +125,20 @@ Login is handled by Firebase Authentication—not GitHub—and private data rema
 
 See [docs/web-deployment.md](docs/web-deployment.md) for the complete deployment instructions.
 
+## Use completely offline on a Mac
+
+The repository also includes a local-only Mac edition. It keeps expenses,
+categories, recurring items, income/savings, dashboards, and CSV/Excel imports,
+but does not use Firebase or synchronize with other devices.
+
+```bash
+npm install
+npm run build:offline:mac
+```
+
+After that, double-click `start-offline-mac.command`. See
+[docs/offline-mac.md](docs/offline-mac.md) for details.
+
 ## Household invitation flow
 
 1. The first user registers and creates a household.

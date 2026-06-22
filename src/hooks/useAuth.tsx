@@ -4,7 +4,6 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
-  type User,
 } from 'firebase/auth';
 import {
   doc,
@@ -22,10 +21,11 @@ import {
   type PropsWithChildren,
 } from 'react';
 import { auth, db } from '../services/firebase';
-import type { UserProfile } from '../types/models';
+import { isLocalMode } from '../services/runtime';
+import type { AppUser, UserProfile } from '../types/models';
 
 interface AuthContextValue {
-  user: User | null;
+  user: AppUser | null;
   profile: UserProfile | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -35,8 +35,8 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-export function AuthProvider({ children }: PropsWithChildren) {
-  const [user, setUser] = useState<User | null>(null);
+function FirebaseAuthProvider({ children }: PropsWithChildren) {
+  const [user, setUser] = useState<AppUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -108,6 +108,38 @@ export function AuthProvider({ children }: PropsWithChildren) {
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+function LocalAuthProvider({ children }: PropsWithChildren) {
+  const user: AppUser = {
+    uid: 'local-user',
+    email: 'local@mac',
+    displayName: 'Usuario local',
+  };
+  const profile: UserProfile = {
+    id: user.uid,
+    email: user.email ?? '',
+    displayName: user.displayName ?? 'Usuario local',
+    householdId: 'local-household',
+    createdAt: null,
+  };
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      profile,
+      loading: false,
+      login: async () => undefined,
+      register: async () => undefined,
+      logout: async () => undefined,
+    }),
+    [],
+  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function AuthProvider({ children }: PropsWithChildren) {
+  if (isLocalMode) return <LocalAuthProvider>{children}</LocalAuthProvider>;
+  return <FirebaseAuthProvider>{children}</FirebaseAuthProvider>;
 }
 
 export function useAuth() {

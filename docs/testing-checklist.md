@@ -52,3 +52,13 @@ Automated tests cover month filtering and summary grouping. Run them with:
 ```bash
 npm test
 ```
+
+## Offline Mac edition
+
+- [ ] Run `npm run build:offline:mac`.
+- [ ] Double-click `start-offline-mac.command`.
+- [ ] Confirm the app opens without a login or Firebase warning.
+- [ ] Add an income, expense, custom category, and recurring expense.
+- [ ] Reload the browser and confirm all local data remains.
+- [ ] Disconnect the Mac from the internet and confirm the app still starts and works.
+- [ ] Import a CSV and an Excel `.xlsx` file while offline.

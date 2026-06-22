@@ -3,6 +3,12 @@ import type { Timestamp } from 'firebase/firestore';
 export type Currency = 'EUR' | 'USD' | 'GBP' | 'PLN' | 'CAD' | 'AUD';
 export type RecurrenceFrequency = 'monthly' | 'yearly';
 
+export interface AppUser {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+}
+
 export interface UserProfile {
   id: string;
   email: string;

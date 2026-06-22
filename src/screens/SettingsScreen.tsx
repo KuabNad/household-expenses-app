@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Share, StyleSheet, Text, View } from 'react-native';
+import { Alert, Share, StyleSheet, Text, View } from 'react-native';
 import { AppButton } from '../components/AppButton';
 import { Notice } from '../components/Notice';
 import { Screen } from '../components/Screen';
 import { useAuth } from '../hooks/useAuth';
 import { useHousehold } from '../hooks/useHousehold';
+import { isLocalMode } from '../services/runtime';
+import { downloadLocalBackup, restoreLocalBackup } from '../services/localData';
 import { colors, radius, spacing } from '../utils/theme';
 
 export function SettingsScreen() {
@@ -24,14 +26,56 @@ export function SettingsScreen() {
       <View style={styles.card}>
         <Text style={styles.eyebrow}>HOGAR</Text>
         <Text style={styles.cardTitle}>{household?.name ?? 'Cargando…'}</Text>
-        <Text style={styles.body}>Comparte este código con una persona de confianza.</Text>
-        <View style={styles.codeBox}>
-          <Text selectable style={styles.code}>
-            {household?.inviteCode ?? '--------'}
+        {isLocalMode ? (
+          <Text style={styles.body}>
+            Edición local para este Mac. No necesita internet ni una cuenta.
           </Text>
-        </View>
-        <AppButton label="Compartir invitación" onPress={shareInvite} variant="secondary" />
+        ) : (
+          <>
+            <Text style={styles.body}>Comparte este código con una persona de confianza.</Text>
+            <View style={styles.codeBox}>
+              <Text selectable style={styles.code}>
+                {household?.inviteCode ?? '--------'}
+              </Text>
+            </View>
+            <AppButton label="Compartir invitación" onPress={shareInvite} variant="secondary" />
+          </>
+        )}
       </View>
+
+      {isLocalMode ? (
+        <View style={styles.card}>
+          <Text style={styles.eyebrow}>BACKUP LOCAL</Text>
+          <Text style={styles.body}>
+            Guarda una copia privada para poder recuperar tus datos si limpias el navegador o
+            cambias de Mac.
+          </Text>
+          <AppButton
+            label="Descargar backup"
+            onPress={() => {
+              void downloadLocalBackup().catch((error) =>
+                Alert.alert(
+                  'No se pudo crear el backup',
+                  error instanceof Error ? error.message : 'Error desconocido.',
+                ),
+              );
+            }}
+            variant="secondary"
+          />
+          <AppButton
+            label="Restaurar backup"
+            onPress={() => {
+              void restoreLocalBackup().catch((error) =>
+                Alert.alert(
+                  'No se pudo restaurar el backup',
+                  error instanceof Error ? error.message : 'Error desconocido.',
+                ),
+              );
+            }}
+            variant="text"
+          />
+        </View>
+      ) : null}
 
       <View style={styles.card}>
         <Text style={styles.eyebrow}>MIEMBROS</Text>
@@ -59,14 +103,18 @@ export function SettingsScreen() {
           <View style={styles.memberText}>
             <Text style={styles.memberName}>Datos privados del hogar</Text>
             <Text style={styles.memberEmail}>
-              Las reglas de Firebase limitan los gastos y categorías a los miembros del hogar.
+              {isLocalMode
+                ? 'Los datos se guardan únicamente en el almacenamiento local de este navegador en tu Mac.'
+                : 'Las reglas de Firebase limitan los gastos y categorías a los miembros del hogar.'}
             </Text>
           </View>
         </View>
       </View>
 
-      <AppButton label="Cerrar sesión" onPress={logout} variant="danger" />
-      <Text style={styles.version}>Gastos del hogar v1.6.1</Text>
+      {!isLocalMode ? <AppButton label="Cerrar sesión" onPress={logout} variant="danger" /> : null}
+      <Text style={styles.version}>
+        Gastos del hogar v1.7.0 {isLocalMode ? '· Mac local' : ''}
+      </Text>
     </Screen>
   );
 }

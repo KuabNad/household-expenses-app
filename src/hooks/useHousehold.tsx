@@ -501,6 +501,7 @@ function FirebaseHouseholdProvider({ children }: PropsWithChildren) {
   const value = useMemo<HouseholdContextValue>(
     () => ({
       household,
+      households: household ? [{ id: household.id, name: household.name }] : [],
       categories,
       expenses,
       monthlyIncomes,
@@ -510,6 +511,16 @@ function FirebaseHouseholdProvider({ children }: PropsWithChildren) {
       joinHousehold,
       addMember: async () => {
         throw new Error('Los miembros online deben unirse mediante un código de invitación.');
+      },
+      updateMember: async () => {
+        throw new Error('El perfil online se administra desde la cuenta del usuario.');
+      },
+      createAdditionalHousehold: async () => {
+        throw new Error('La versión online admite un hogar por cuenta.');
+      },
+      switchHousehold: async () => undefined,
+      clearHousehold: async () => {
+        throw new Error('Esta acción solo está disponible en la edición local.');
       },
       addExpense,
       updateExpense,

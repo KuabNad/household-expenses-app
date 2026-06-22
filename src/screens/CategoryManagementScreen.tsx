@@ -11,7 +11,26 @@ import { friendlyError } from '../services/errors';
 import type { Category } from '../types/models';
 import { colors, radius, spacing } from '../utils/theme';
 
-const COLORS = ['#315C4C', '#D28B5C', '#6F8FA6', '#A16E83', '#7D9363', '#C5A53D'];
+const COLORS = [
+  '#315C4C',
+  '#D28B5C',
+  '#6F8FA6',
+  '#A16E83',
+  '#7D9363',
+  '#C5A53D',
+  '#B85C5C',
+  '#7B6FA6',
+  '#4F94A3',
+  '#D66A8A',
+  '#8A6D3B',
+  '#4C8C6B',
+  '#D35F45',
+  '#5B72B2',
+  '#9A63A8',
+  '#777E7B',
+  '#2E86AB',
+  '#E09F3E',
+];
 
 export function CategoryManagementScreen() {
   const { categories, expenses, addCategory, updateCategory, deleteCategory, syncError } =
@@ -187,7 +206,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   formTitle: { color: colors.text, fontSize: 18, fontWeight: '800' },
-  colors: { flexDirection: 'row', gap: spacing.md },
+  colors: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   color: { borderRadius: 16, height: 30, width: 30 },
   selectedColor: { borderColor: colors.text, borderWidth: 3 },
   actions: { flexDirection: 'row', gap: spacing.sm },

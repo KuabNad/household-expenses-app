@@ -66,3 +66,8 @@ npm test
 - [ ] Add a manual expense paid by the second member.
 - [ ] Import a bank table for the second member.
 - [ ] Save monthly income for both local members and verify separate savings totals.
+- [ ] Rename an existing local member and confirm old expenses show the new name.
+- [ ] Create a second household, switch between households, and verify their data is separate.
+- [ ] Type `VACIAR`, empty one household, and confirm the other household is unchanged.
+- [ ] Open the Terminal-provided LAN address on an iPhone connected to the same Wi-Fi.
+- [ ] Add an expense on the iPhone and confirm it appears on the Mac within a few seconds.

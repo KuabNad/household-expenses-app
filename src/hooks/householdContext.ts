@@ -11,6 +11,7 @@ import type {
 
 export interface HouseholdContextValue {
   household: Household | null;
+  households: Array<{ id: string; name: string }>;
   categories: Category[];
   expenses: Expense[];
   monthlyIncomes: MonthlyIncome[];
@@ -19,6 +20,10 @@ export interface HouseholdContextValue {
   createHousehold: (name: string) => Promise<void>;
   joinHousehold: (inviteCode: string) => Promise<void>;
   addMember: (displayName: string) => Promise<void>;
+  updateMember: (memberId: string, displayName: string) => Promise<void>;
+  createAdditionalHousehold: (name: string) => Promise<void>;
+  switchHousehold: (householdId: string) => Promise<void>;
+  clearHousehold: () => Promise<void>;
   addExpense: (input: ExpenseInput) => Promise<void>;
   updateExpense: (id: string, input: ExpenseInput) => Promise<void>;
   deleteExpense: (expense: Expense) => Promise<void>;

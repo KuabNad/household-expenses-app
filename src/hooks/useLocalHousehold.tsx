@@ -3,6 +3,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type PropsWithChildren,
 } from 'react';
@@ -20,13 +21,22 @@ import { LOCAL_STORAGE_KEY } from '../services/localData';
 import { HouseholdContext, type HouseholdContextValue } from './householdContext';
 import { useAuth } from './useAuth';
 
-const HOUSEHOLD_ID = 'local-household';
-
 interface LocalHouseholdData {
   household: Household;
   categories: Category[];
   expenses: Expense[];
   monthlyIncomes: MonthlyIncome[];
+}
+
+interface LocalStore {
+  version: 2;
+  activeHouseholdId: string;
+  households: Record<string, LocalHouseholdData>;
+}
+
+interface RemoteEnvelope {
+  data: unknown;
+  updatedAt: number;
 }
 
 function id(prefix: string) {
@@ -37,10 +47,15 @@ function id(prefix: string) {
   return `${prefix}-${random}`;
 }
 
-function createInitialData(userId: string, displayName: string): LocalHouseholdData {
+function createHouseholdData(
+  userId: string,
+  displayName: string,
+  name = 'Mi hogar',
+  householdId = id('local-household'),
+): LocalHouseholdData {
   const household: Household = {
-    id: HOUSEHOLD_ID,
-    name: 'Mi hogar',
+    id: householdId,
+    name,
     inviteCode: 'LOCAL',
     members: {
       [userId]: {
@@ -56,8 +71,8 @@ function createInitialData(userId: string, displayName: string): LocalHouseholdD
   return {
     household,
     categories: DEFAULT_CATEGORIES.map((category, index) => ({
-      id: `default-${index + 1}`,
-      householdId: HOUSEHOLD_ID,
+      id: `${householdId}-default-${index + 1}`,
+      householdId,
       ...category,
       isDefault: true,
       createdBy: userId,
@@ -68,124 +83,325 @@ function createInitialData(userId: string, displayName: string): LocalHouseholdD
   };
 }
 
+function createInitialStore(userId: string, displayName: string): LocalStore {
+  const data = createHouseholdData(userId, displayName, 'Mi hogar', 'local-household');
+  return {
+    version: 2,
+    activeHouseholdId: data.household.id,
+    households: { [data.household.id]: data },
+  };
+}
+
+function normalizeStore(value: unknown, userId: string, displayName: string): LocalStore {
+  if (!value || typeof value !== 'object') return createInitialStore(userId, displayName);
+  const candidate = value as Partial<LocalStore> & Partial<LocalHouseholdData>;
+  if (
+    candidate.version === 2 &&
+    typeof candidate.activeHouseholdId === 'string' &&
+    candidate.households &&
+    candidate.households[candidate.activeHouseholdId]
+  ) {
+    return candidate as LocalStore;
+  }
+  if (
+    candidate.household &&
+    Array.isArray(candidate.categories) &&
+    Array.isArray(candidate.expenses) &&
+    Array.isArray(candidate.monthlyIncomes)
+  ) {
+    const legacy = candidate as LocalHouseholdData;
+    return {
+      version: 2,
+      activeHouseholdId: legacy.household.id,
+      households: { [legacy.household.id]: legacy },
+    };
+  }
+  return createInitialStore(userId, displayName);
+}
+
+async function readRemoteStore() {
+  const response = await fetch('/api/data', { cache: 'no-store' });
+  if (!response.ok) throw new Error('Servidor local no disponible.');
+  return (await response.json()) as RemoteEnvelope;
+}
+
+async function writeRemoteStore(store: LocalStore) {
+  const response = await fetch('/api/data', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(store),
+  });
+  if (!response.ok) throw new Error('No se pudo guardar en el Mac.');
+  return (await response.json()) as { updatedAt: number };
+}
+
 export function LocalHouseholdProvider({ children }: PropsWithChildren) {
   const { user, profile } = useAuth();
   const userId = user?.uid ?? 'local-user';
-  const [data, setData] = useState<LocalHouseholdData>(() =>
-    createInitialData(userId, profile?.displayName ?? 'Usuario local'),
-  );
+  const displayName = profile?.displayName ?? 'Usuario local';
+  const [store, setStore] = useState<LocalStore>(() => createInitialStore(userId, displayName));
   const [loading, setLoading] = useState(true);
   const [hydrated, setHydrated] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const remoteUpdatedAt = useRef(0);
+  const skipNextRemoteWrite = useRef(false);
+
+  const data =
+    store.households[store.activeHouseholdId] ??
+    Object.values(store.households)[0] ??
+    createHouseholdData(userId, displayName);
 
   useEffect(() => {
-    void AsyncStorage.getItem(LOCAL_STORAGE_KEY)
-      .then((stored) => {
-        if (stored) setData(JSON.parse(stored) as LocalHouseholdData);
-      })
-      .catch(() => setSyncError('No se pudieron leer los datos guardados en este Mac.'))
-      .finally(() => {
+    void (async () => {
+      try {
+        const remote = await readRemoteStore();
+        if (remote.data) {
+          setStore(normalizeStore(remote.data, userId, displayName));
+          remoteUpdatedAt.current = remote.updatedAt;
+        } else {
+          const stored = await AsyncStorage.getItem(LOCAL_STORAGE_KEY);
+          if (stored) setStore(normalizeStore(JSON.parse(stored), userId, displayName));
+        }
+      } catch {
+        try {
+          const stored = await AsyncStorage.getItem(LOCAL_STORAGE_KEY);
+          if (stored) setStore(normalizeStore(JSON.parse(stored), userId, displayName));
+          setSyncError('Modo individual: no se pudo conectar con el servidor local del Mac.');
+        } catch {
+          setSyncError('No se pudieron leer los datos guardados.');
+        }
+      } finally {
         setHydrated(true);
         setLoading(false);
-      });
-  }, []);
+      }
+    })();
+  }, [displayName, userId]);
 
   useEffect(() => {
     if (!hydrated) return;
-    void AsyncStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data)).catch(() =>
-      setSyncError('No se pudieron guardar los cambios en este Mac.'),
+    void AsyncStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(store)).catch(() =>
+      setSyncError('No se pudo guardar la copia de seguridad del navegador.'),
     );
-  }, [data, hydrated]);
+    if (skipNextRemoteWrite.current) {
+      skipNextRemoteWrite.current = false;
+      return;
+    }
+    void writeRemoteStore(store)
+      .then(({ updatedAt }) => {
+        remoteUpdatedAt.current = updatedAt;
+        setSyncError(null);
+      })
+      .catch(() => setSyncError('Los cambios se guardaron en este navegador, pero no en el Mac.'));
+  }, [hydrated, store]);
 
-  const createHousehold = useCallback(async (name: string) => {
-    setData((current) => ({
-      ...current,
-      household: { ...current.household, name: name.trim() || current.household.name },
-    }));
+  useEffect(() => {
+    if (!hydrated) return;
+    const timer = setInterval(() => {
+      void readRemoteStore()
+        .then((remote) => {
+          if (remote.data && remote.updatedAt > remoteUpdatedAt.current) {
+            remoteUpdatedAt.current = remote.updatedAt;
+            skipNextRemoteWrite.current = true;
+            setStore((current) => {
+              const next = normalizeStore(remote.data, userId, displayName);
+              return next.households[current.activeHouseholdId]
+                ? { ...next, activeHouseholdId: current.activeHouseholdId }
+                : next;
+            });
+          }
+        })
+        .catch(() => undefined);
+    }, 2500);
+    return () => clearInterval(timer);
+  }, [displayName, hydrated, userId]);
+
+  const updateActive = useCallback(
+    (updater: (current: LocalHouseholdData) => LocalHouseholdData) => {
+      setStore((current) => {
+        const active = current.households[current.activeHouseholdId];
+        if (!active) return current;
+        return {
+          ...current,
+          households: {
+            ...current.households,
+            [current.activeHouseholdId]: updater(active),
+          },
+        };
+      });
+    },
+    [],
+  );
+
+  const createHousehold = useCallback(
+    async (name: string) => {
+      const cleanName = name.trim();
+      if (!cleanName) throw new Error('Introduce un nombre para el hogar.');
+      updateActive((current) => ({
+        ...current,
+        household: { ...current.household, name: cleanName },
+      }));
+    },
+    [updateActive],
+  );
+
+  const createAdditionalHousehold = useCallback(
+    async (name: string) => {
+      const cleanName = name.trim();
+      if (cleanName.length < 2) throw new Error('Introduce al menos 2 caracteres.');
+      if (
+        Object.values(store.households).some(
+          (item) => item.household.name.toLowerCase() === cleanName.toLowerCase(),
+        )
+      ) {
+        throw new Error('Ya existe un hogar con este nombre.');
+      }
+      const next = createHouseholdData(
+        userId,
+        data.household.members[userId]?.displayName ?? displayName,
+        cleanName,
+      );
+      setStore((current) => ({
+        ...current,
+        activeHouseholdId: next.household.id,
+        households: { ...current.households, [next.household.id]: next },
+      }));
+    },
+    [data.household.members, displayName, store.households, userId],
+  );
+
+  const switchHousehold = useCallback(async (householdId: string) => {
+    setStore((current) =>
+      current.households[householdId]
+        ? { ...current, activeHouseholdId: householdId }
+        : current,
+    );
   }, []);
 
-  const addMember = useCallback(async (displayName: string) => {
-    const cleanName = displayName.trim();
-    if (cleanName.length < 2) throw new Error('Introduce al menos 2 caracteres.');
-    if (
-      Object.values(data.household.members).some(
-        (member) => member.displayName.toLowerCase() === cleanName.toLowerCase(),
-      )
-    ) {
-      throw new Error('Ya existe una persona con este nombre.');
-    }
-    const memberId = id('member');
-    setData((current) => ({
-      ...current,
-      household: {
-        ...current.household,
-        members: {
-          ...current.household.members,
-          [memberId]: {
-            email: '',
-            displayName: cleanName,
-            joinedAt: null,
+  const addMember = useCallback(
+    async (name: string) => {
+      const cleanName = name.trim();
+      if (cleanName.length < 2) throw new Error('Introduce al menos 2 caracteres.');
+      if (
+        Object.values(data.household.members).some(
+          (member) => member.displayName.toLowerCase() === cleanName.toLowerCase(),
+        )
+      ) {
+        throw new Error('Ya existe una persona con este nombre.');
+      }
+      const memberId = id('member');
+      updateActive((current) => ({
+        ...current,
+        household: {
+          ...current.household,
+          members: {
+            ...current.household.members,
+            [memberId]: { email: '', displayName: cleanName, joinedAt: null },
+          },
+          memberIds: [...current.household.memberIds, memberId],
+        },
+      }));
+    },
+    [data.household.members, updateActive],
+  );
+
+  const updateMember = useCallback(
+    async (memberId: string, name: string) => {
+      const cleanName = name.trim();
+      if (cleanName.length < 2) throw new Error('Introduce al menos 2 caracteres.');
+      if (!data.household.members[memberId]) throw new Error('No se encontró la persona.');
+      if (
+        Object.entries(data.household.members).some(
+          ([idValue, member]) =>
+            idValue !== memberId &&
+            member.displayName.toLowerCase() === cleanName.toLowerCase(),
+        )
+      ) {
+        throw new Error('Ya existe una persona con este nombre.');
+      }
+      updateActive((current) => ({
+        ...current,
+        household: {
+          ...current.household,
+          members: {
+            ...current.household.members,
+            [memberId]: { ...current.household.members[memberId], displayName: cleanName },
           },
         },
-        memberIds: [...current.household.memberIds, memberId],
-      },
-    }));
-  }, [data.household.members]);
+      }));
+    },
+    [data.household.members, updateActive],
+  );
+
+  const clearHousehold = useCallback(async () => {
+    updateActive((current) => {
+      const fresh = createHouseholdData(
+        current.household.createdBy,
+        current.household.members[current.household.createdBy]?.displayName ?? displayName,
+        current.household.name,
+        current.household.id,
+      );
+      return {
+        ...fresh,
+        household: {
+          ...fresh.household,
+          members: current.household.members,
+          memberIds: current.household.memberIds,
+        },
+      };
+    });
+  }, [displayName, updateActive]);
 
   const addExpense = useCallback(
     async (input: ExpenseInput) => {
-      const now = null;
       const expense: Expense = {
         id: id('expense'),
-        householdId: HOUSEHOLD_ID,
+        householdId: data.household.id,
         ...input,
         paymentMethod: input.paymentMethod?.trim() ?? '',
         description: input.description.trim(),
         createdBy: userId,
-        createdAt: now,
-        updatedAt: now,
+        createdAt: null,
+        updatedAt: null,
       };
-      setData((current) => ({
-        ...current,
-        expenses: [expense, ...current.expenses],
-      }));
+      updateActive((current) => ({ ...current, expenses: [expense, ...current.expenses] }));
     },
-    [userId],
+    [data.household.id, updateActive, userId],
   );
 
-  const updateExpense = useCallback(async (expenseId: string, input: ExpenseInput) => {
-    setData((current) => ({
-      ...current,
-      expenses: current.expenses.map((expense) =>
-        expense.id === expenseId
-          ? {
-              ...expense,
-              ...input,
-              paymentMethod: input.paymentMethod?.trim() ?? '',
-              description: input.description.trim(),
-              updatedAt: null,
-            }
-          : expense,
-      ),
-    }));
-  }, []);
+  const updateExpense = useCallback(
+    async (expenseId: string, input: ExpenseInput) => {
+      updateActive((current) => ({
+        ...current,
+        expenses: current.expenses.map((expense) =>
+          expense.id === expenseId
+            ? {
+                ...expense,
+                ...input,
+                paymentMethod: input.paymentMethod?.trim() ?? '',
+                description: input.description.trim(),
+                updatedAt: null,
+              }
+            : expense,
+        ),
+      }));
+    },
+    [updateActive],
+  );
 
-  const deleteExpense = useCallback(async (expense: Expense) => {
-    setData((current) => ({
-      ...current,
-      expenses: current.expenses.filter((item) => item.id !== expense.id),
-    }));
-  }, []);
+  const deleteExpense = useCallback(
+    async (expense: Expense) => {
+      updateActive((current) => ({
+        ...current,
+        expenses: current.expenses.filter((item) => item.id !== expense.id),
+      }));
+    },
+    [updateActive],
+  );
 
   const saveMonthlyIncome = useCallback(
-    async (
-      month: string,
-      amount: number,
-      currency: Currency,
-      targetUserId = userId,
-    ) => {
+    async (month: string, amount: number, currency: Currency, targetUserId = userId) => {
       if (!Number.isFinite(amount) || amount < 0) throw new Error('Introduce un ingreso válido.');
-      setData((current) => {
+      updateActive((current) => {
         const existing = current.monthlyIncomes.find(
           (income) =>
             income.month === month &&
@@ -193,8 +409,8 @@ export function LocalHouseholdProvider({ children }: PropsWithChildren) {
             income.currency === currency,
         );
         const next: MonthlyIncome = {
-          id: existing?.id ?? `${month}_${targetUserId}_${currency}`,
-          householdId: HOUSEHOLD_ID,
+          id: existing?.id ?? `${current.household.id}_${month}_${targetUserId}_${currency}`,
+          householdId: current.household.id,
           userId: targetUserId,
           month,
           amount: Math.round(amount * 100) / 100,
@@ -210,7 +426,7 @@ export function LocalHouseholdProvider({ children }: PropsWithChildren) {
         };
       });
     },
-    [userId],
+    [updateActive, userId],
   );
 
   const importSpreadsheetTransactions = useCallback(
@@ -230,11 +446,10 @@ export function LocalHouseholdProvider({ children }: PropsWithChildren) {
             amount: (current?.amount ?? 0) + item.amount,
           });
         });
-
-      setData((current) => {
+      updateActive((current) => {
         const importedExpenses: Expense[] = expenseRows.map((item) => ({
           id: id('expense'),
-          householdId: HOUSEHOLD_ID,
+          householdId: current.household.id,
           amount: item.amount,
           currency: item.currency,
           date: item.date,
@@ -258,8 +473,10 @@ export function LocalHouseholdProvider({ children }: PropsWithChildren) {
               income.currency === currency,
           );
           const next: MonthlyIncome = {
-            id: existing?.id ?? `${month}_${targetUserId}_${currency}`,
-            householdId: HOUSEHOLD_ID,
+            id:
+              existing?.id ??
+              `${current.household.id}_${month}_${targetUserId}_${currency}`,
+            householdId: current.household.id,
             userId: targetUserId,
             month,
             amount: Math.round(amount * 100) / 100,
@@ -279,7 +496,7 @@ export function LocalHouseholdProvider({ children }: PropsWithChildren) {
       });
       return { expenses: expenseRows.length, incomeMonths: incomeGroups.size };
     },
-    [userId],
+    [updateActive, userId],
   );
 
   const addCategory = useCallback(
@@ -288,13 +505,13 @@ export function LocalHouseholdProvider({ children }: PropsWithChildren) {
       if (data.categories.some((item) => item.name.toLowerCase() === cleanName.toLowerCase())) {
         throw new Error('Ya existe una categoría con este nombre.');
       }
-      setData((current) => ({
+      updateActive((current) => ({
         ...current,
         categories: [
           ...current.categories,
           {
             id: id('category'),
-            householdId: HOUSEHOLD_ID,
+            householdId: current.household.id,
             name: cleanName,
             icon: 'pricetag-outline',
             color,
@@ -305,31 +522,34 @@ export function LocalHouseholdProvider({ children }: PropsWithChildren) {
         ],
       }));
     },
-    [data.categories, userId],
+    [data.categories, updateActive, userId],
   );
 
-  const updateCategory = useCallback(async (category: Category, name: string, color: string) => {
-    setData((current) => ({
-      ...current,
-      categories: current.categories.map((item) =>
-        item.id === category.id ? { ...item, name: name.trim(), color } : item,
-      ),
-    }));
-  }, []);
+  const updateCategory = useCallback(
+    async (category: Category, name: string, color: string) => {
+      updateActive((current) => ({
+        ...current,
+        categories: current.categories.map((item) =>
+          item.id === category.id ? { ...item, name: name.trim(), color } : item,
+        ),
+      }));
+    },
+    [updateActive],
+  );
 
   const deleteCategory = useCallback(
-    async (
-      category: Category,
-      expenseAction?: 'delete-expenses' | 'move-to-other',
-    ) => {
+    async (category: Category, expenseAction?: 'delete-expenses' | 'move-to-other') => {
       if (category.isDefault) throw new Error('Las categorías predeterminadas no se pueden eliminar.');
       const affected = data.expenses.filter((expense) => expense.categoryId === category.id);
       if (affected.length && !expenseAction) {
         throw new Error('Elige qué hacer con los gastos de esta categoría.');
       }
-      setData((current) => {
+      updateActive((current) => {
         const other = current.categories.find(
-          (item) => item.isDefault && item.name.toLowerCase() === 'otros',
+          (item) =>
+            item.isDefault &&
+            (item.icon === 'ellipsis-horizontal-outline' ||
+              item.name.toLowerCase() === 'otros'),
         );
         return {
           ...current,
@@ -345,22 +565,29 @@ export function LocalHouseholdProvider({ children }: PropsWithChildren) {
         };
       });
     },
-    [data.expenses],
+    [data.expenses, updateActive],
   );
 
   const value = useMemo<HouseholdContextValue>(
     () => ({
       household: data.household,
+      households: Object.values(store.households)
+        .map((item) => ({ id: item.household.id, name: item.household.name }))
+        .sort((a, b) => a.name.localeCompare(b.name, 'es')),
       categories: [...data.categories].sort((a, b) => a.name.localeCompare(b.name, 'es')),
       expenses: [...data.expenses].sort((a, b) => b.date.localeCompare(a.date)),
       monthlyIncomes: data.monthlyIncomes,
       loading,
       syncError,
       createHousehold,
+      createAdditionalHousehold,
+      switchHousehold,
+      clearHousehold,
       joinHousehold: async () => {
         throw new Error('Las invitaciones no están disponibles en el modo local.');
       },
       addMember,
+      updateMember,
       addExpense,
       updateExpense,
       deleteExpense,
@@ -374,6 +601,8 @@ export function LocalHouseholdProvider({ children }: PropsWithChildren) {
       addCategory,
       addExpense,
       addMember,
+      clearHousehold,
+      createAdditionalHousehold,
       createHousehold,
       data,
       deleteCategory,
@@ -381,9 +610,12 @@ export function LocalHouseholdProvider({ children }: PropsWithChildren) {
       importSpreadsheetTransactions,
       loading,
       saveMonthlyIncome,
+      store.households,
+      switchHousehold,
       syncError,
       updateCategory,
       updateExpense,
+      updateMember,
     ],
   );
 

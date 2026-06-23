@@ -9,42 +9,22 @@ import { Screen } from '../components/Screen';
 import { useHousehold } from '../hooks/useHousehold';
 import { friendlyError } from '../services/errors';
 import type { Category } from '../types/models';
+import { CATEGORY_COLORS, strongerCategoryColor } from '../utils/categoryColors';
 import { colors, radius, spacing } from '../utils/theme';
-
-const COLORS = [
-  '#315C4C',
-  '#D28B5C',
-  '#6F8FA6',
-  '#A16E83',
-  '#7D9363',
-  '#C5A53D',
-  '#B85C5C',
-  '#7B6FA6',
-  '#4F94A3',
-  '#D66A8A',
-  '#8A6D3B',
-  '#4C8C6B',
-  '#D35F45',
-  '#5B72B2',
-  '#9A63A8',
-  '#777E7B',
-  '#2E86AB',
-  '#E09F3E',
-];
 
 export function CategoryManagementScreen() {
   const { categories, expenses, addCategory, updateCategory, deleteCategory, syncError } =
     useHousehold();
   const [editing, setEditing] = useState<Category | null>(null);
   const [name, setName] = useState('');
-  const [color, setColor] = useState(COLORS[0]);
+  const [color, setColor] = useState<string>(CATEGORY_COLORS[0]);
   const [loading, setLoading] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Category | null>(null);
 
   const reset = () => {
     setEditing(null);
     setName('');
-    setColor(COLORS[0]);
+    setColor(CATEGORY_COLORS[0]);
   };
 
   const submit = async () => {
@@ -67,7 +47,7 @@ export function CategoryManagementScreen() {
   const edit = (category: Category) => {
     setEditing(category);
     setName(category.name);
-    setColor(category.color ?? COLORS[0]);
+    setColor(strongerCategoryColor(category.color));
   };
 
   const remove = async (expenseAction?: 'delete-expenses' | 'move-to-other') => {
@@ -97,7 +77,7 @@ export function CategoryManagementScreen() {
         <Text style={styles.formTitle}>{editing ? 'Editar categoría' : 'Nueva categoría'}</Text>
         <AppInput label="Nombre" onChangeText={setName} placeholder="Mascotas" value={name} />
         <View style={styles.colors}>
-          {COLORS.map((item) => (
+          {CATEGORY_COLORS.map((item) => (
             <Pressable
               accessibilityLabel={`Usar color ${item}`}
               key={item}
@@ -129,7 +109,12 @@ export function CategoryManagementScreen() {
         <View style={styles.list}>
           {categories.map((category) => (
             <View key={category.id} style={styles.row}>
-              <View style={[styles.dot, { backgroundColor: category.color ?? colors.muted }]} />
+              <View
+                style={[
+                  styles.dot,
+                  { backgroundColor: strongerCategoryColor(category.color) },
+                ]}
+              />
               <View style={styles.nameWrap}>
                 <Text style={styles.name}>{category.name}</Text>
                 <Text style={styles.type}>

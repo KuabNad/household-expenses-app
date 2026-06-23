@@ -1,7 +1,12 @@
 import { useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { EmptyState } from '../components/EmptyState';
 import { ExpenseRow } from '../components/ExpenseRow';
+import {
+  ExpenseSortPicker,
+  expenseSortLabel,
+  type ExpenseSort,
+} from '../components/ExpenseSortPicker';
 import { InteractivePieChart } from '../components/InteractivePieChart';
 import { MonthSelector } from '../components/MonthSelector';
 import { MonthlyMemberFinances } from '../components/MonthlyMemberFinances';
@@ -12,6 +17,7 @@ import { YearSpendingCalendar } from '../components/YearSpendingCalendar';
 import { useHousehold } from '../hooks/useHousehold';
 import { useAuth } from '../hooks/useAuth';
 import { isLocalMode } from '../services/runtime';
+import { sortExpenses } from '../utils/expenseSort';
 import { formatMoney, monthKey, toDateInput } from '../utils/format';
 import {
   expensesForMonth,
@@ -38,6 +44,8 @@ export function DashboardScreen() {
   const todayKey = toDateInput(today);
   const [selectedMonth, setSelectedMonth] = useState(monthKey(today));
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [expenseSort, setExpenseSort] = useState<ExpenseSort>('newest');
+  const [sortPickerOpen, setSortPickerOpen] = useState(false);
   const changeMonth = (month: string) => {
     setSelectedMonth(month);
     setSelectedCategoryId(null);
@@ -58,6 +66,10 @@ export function DashboardScreen() {
     [monthlyExpenses, selectedCategoryId],
   );
   const visibleTotals = useMemo(() => totalsByCurrency(visibleExpenses), [visibleExpenses]);
+  const sortedVisibleExpenses = useMemo(
+    () => sortExpenses(visibleExpenses, expenseSort),
+    [expenseSort, visibleExpenses],
+  );
   const payerTotals = useMemo(
     () => spendingByPayer(visibleExpenses, household?.members ?? {}),
     [household?.members, visibleExpenses],
@@ -181,10 +193,22 @@ export function DashboardScreen() {
             </View>
           ) : null}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {selectedCategoryId ? 'Gastos de la categoría' : 'Gastos recientes'}
-            </Text>
-            {visibleExpenses.slice(0, 5).map((expense) => (
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeading}>
+                <Text style={styles.sectionTitle}>
+                  {selectedCategoryId ? 'Gastos de la categoría' : 'Gastos recientes'}
+                </Text>
+                <Text style={styles.sortLabel}>{expenseSortLabel(expenseSort)}</Text>
+              </View>
+              <Pressable
+                accessibilityLabel="Cambiar orden de gastos"
+                onPress={() => setSortPickerOpen(true)}
+                style={styles.sortButton}
+              >
+                <Text style={styles.sortButtonText}>Ordenar</Text>
+              </Pressable>
+            </View>
+            {sortedVisibleExpenses.slice(0, 5).map((expense) => (
               <ExpenseRow
                 category={categoryMap.get(expense.categoryId)}
                 expense={expense}
@@ -192,6 +216,12 @@ export function DashboardScreen() {
                 member={household?.members[expense.paidByUserId]}
               />
             ))}
+            <ExpenseSortPicker
+              onChange={setExpenseSort}
+              onClose={() => setSortPickerOpen(false)}
+              open={sortPickerOpen}
+              value={expenseSort}
+            />
           </View>
         </>
       )}
@@ -227,7 +257,22 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   section: { gap: spacing.sm },
+  sectionHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.md,
+    justifyContent: 'space-between',
+  },
+  sectionHeading: { flex: 1, gap: 2 },
   sectionTitle: { color: colors.text, fontSize: 18, fontWeight: '800' },
+  sortLabel: { color: colors.muted, fontSize: 11 },
+  sortButton: {
+    backgroundColor: colors.primaryLight,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  sortButtonText: { color: colors.primary, fontSize: 13, fontWeight: '800' },
   sectionHint: { color: colors.muted, fontSize: 12, lineHeight: 17 },
   emptyHint: { color: colors.muted, fontSize: 14 },
   subscriptionCard: {

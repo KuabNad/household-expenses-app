@@ -16,6 +16,7 @@ import type {
   MonthlyIncome,
   SpreadsheetTransactionImport,
 } from '../types/models';
+import { strongerCategoryColor } from '../utils/categoryColors';
 import { DEFAULT_CATEGORIES } from '../utils/categories';
 import { LOCAL_STORAGE_KEY } from '../services/localData';
 import { HouseholdContext, type HouseholdContextValue } from './householdContext';
@@ -92,6 +93,16 @@ function createInitialStore(userId: string, displayName: string): LocalStore {
   };
 }
 
+function normalizeHouseholdData(data: LocalHouseholdData): LocalHouseholdData {
+  return {
+    ...data,
+    categories: data.categories.map((category) => ({
+      ...category,
+      color: strongerCategoryColor(category.color),
+    })),
+  };
+}
+
 function normalizeStore(value: unknown, userId: string, displayName: string): LocalStore {
   if (!value || typeof value !== 'object') return createInitialStore(userId, displayName);
   const candidate = value as Partial<LocalStore> & Partial<LocalHouseholdData>;
@@ -101,7 +112,16 @@ function normalizeStore(value: unknown, userId: string, displayName: string): Lo
     candidate.households &&
     candidate.households[candidate.activeHouseholdId]
   ) {
-    return candidate as LocalStore;
+    const store = candidate as LocalStore;
+    return {
+      ...store,
+      households: Object.fromEntries(
+        Object.entries(store.households).map(([idValue, householdData]) => [
+          idValue,
+          normalizeHouseholdData(householdData),
+        ]),
+      ),
+    };
   }
   if (
     candidate.household &&
@@ -113,7 +133,7 @@ function normalizeStore(value: unknown, userId: string, displayName: string): Lo
     return {
       version: 2,
       activeHouseholdId: legacy.household.id,
-      households: { [legacy.household.id]: legacy },
+      households: { [legacy.household.id]: normalizeHouseholdData(legacy) },
     };
   }
   return createInitialStore(userId, displayName);

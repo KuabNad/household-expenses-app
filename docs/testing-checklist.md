@@ -71,3 +71,5 @@ npm test
 - [ ] Type `VACIAR`, empty one household, and confirm the other household is unchanged.
 - [ ] Open the Terminal-provided LAN address on an iPhone connected to the same Wi-Fi.
 - [ ] Add an expense on the iPhone and confirm it appears on the Mac within a few seconds.
+- [ ] Open the recent-expense order dialog and test newest, oldest, highest, and lowest.
+- [ ] Confirm category colors are saturated and easy to distinguish in forms and charts.

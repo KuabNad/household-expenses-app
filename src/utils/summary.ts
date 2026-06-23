@@ -5,6 +5,7 @@ import type {
   HouseholdMember,
   MonthlyIncome,
 } from '../types/models';
+import { strongerCategoryColor } from './categoryColors';
 
 export interface SummaryLine {
   id: string;
@@ -177,7 +178,7 @@ export function spendingByCategory(expenses: Expense[], categories: Category[]) 
       label: category?.name ?? 'Categoría eliminada',
       amount: (current?.amount ?? 0) + expense.amount,
       currency: expense.currency,
-      color: category?.color,
+      color: strongerCategoryColor(category?.color),
     });
   });
 

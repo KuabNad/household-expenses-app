@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Category, Expense, HouseholdMember } from '../types/models';
+import { strongerCategoryColor } from '../utils/categoryColors';
 import { formatDate, formatMoney } from '../utils/format';
 import { colors, radius, spacing } from '../utils/theme';
 
@@ -15,15 +16,16 @@ export function ExpenseRow({
   member?: HouseholdMember;
   onPress?: () => void;
 }) {
+  const categoryColor = strongerCategoryColor(category?.color);
   return (
     <Pressable
       disabled={!onPress}
       onPress={onPress}
       style={({ pressed }) => [styles.container, pressed && styles.pressed]}
     >
-      <View style={[styles.icon, { backgroundColor: `${category?.color ?? '#777E7B'}22` }]}>
+      <View style={[styles.icon, { backgroundColor: `${categoryColor}22` }]}>
         <Ionicons
-          color={category?.color ?? colors.muted}
+          color={categoryColor}
           name={(category?.icon as keyof typeof Ionicons.glyphMap) ?? 'receipt-outline'}
           size={21}
         />

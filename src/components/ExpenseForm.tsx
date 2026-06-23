@@ -9,6 +9,7 @@ import type {
   RecurrenceFrequency,
 } from '../types/models';
 import { useAuth } from '../hooks/useAuth';
+import { strongerCategoryColor } from '../utils/categoryColors';
 import { isValidDateInput, toDateInput } from '../utils/format';
 import { colors, radius, spacing } from '../utils/theme';
 import { AppButton } from './AppButton';
@@ -157,7 +158,7 @@ export function ExpenseForm({
         <View style={styles.choices}>
           {categories.map((category) => (
             <Choice
-              color={category.color}
+              color={strongerCategoryColor(category.color)}
               key={category.id}
               label={category.name}
               onPress={() => setCategoryId(category.id)}

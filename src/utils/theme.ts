@@ -9,7 +9,7 @@ export const colors = {
   danger: '#B33A3A',
   warning: '#A36B18',
   white: '#FFFFFF',
-  chart: ['#315C4C', '#D28B5C', '#6F8FA6', '#A16E83', '#7D9363', '#C5A53D'],
+  chart: ['#D62828', '#F77F00', '#F2B705', '#2E8B57', '#0077B6', '#6A1B9A'],
 } as const;
 
 export const spacing = {

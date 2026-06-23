@@ -14,6 +14,7 @@ The same codebase also runs as a web app on GitHub Pages. See [docs/web-deployme
 - Edit and delete only expenses created by the signed-in user
 - Create, edit, and delete shared custom categories
 - Monthly dashboard with totals by currency, category bars, payer totals, and recent expenses
+- Expense explorer with combined category, household member, month, year, and custom-date filters
 - Month filtering
 - Spanish interface and Spanish default categories
 - Editable expense dates on web and mobile

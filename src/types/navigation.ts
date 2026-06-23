@@ -1,5 +1,6 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
 import type { Expense } from './models';
+import type { ExpensePeriod } from '../utils/expenseFilters';
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -12,7 +13,18 @@ export type HouseholdStackParamList = {
 };
 
 export type ExpensesStackParamList = {
-  ExpenseList: undefined;
+  ExpenseList:
+    | {
+        categoryId?: string;
+        userId?: string;
+        period?: ExpensePeriod;
+        month?: string;
+        year?: number;
+        startDate?: string;
+        endDate?: string;
+        requestKey?: number;
+      }
+    | undefined;
   EditExpense: { expense: Expense };
 };
 

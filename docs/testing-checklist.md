@@ -73,3 +73,7 @@ npm test
 - [ ] Add an expense on the iPhone and confirm it appears on the Mac within a few seconds.
 - [ ] Open the recent-expense order dialog and test newest, oldest, highest, and lowest.
 - [ ] Confirm category colors are saturated and easy to distinguish in forms and charts.
+- [ ] Select a dashboard category and open its monthly expenses in the Gastos tab.
+- [ ] Open a year-to-date category bar and verify the Gastos tab uses the whole year.
+- [ ] Combine category, household member, and month filters in Gastos.
+- [ ] Test year, all-history, and custom date-range filters.

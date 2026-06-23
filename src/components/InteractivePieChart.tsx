@@ -43,10 +43,12 @@ export function InteractivePieChart({
   items,
   selectedCategoryId,
   onSelect,
+  onOpenCategory,
 }: {
   items: SummaryLine[];
   selectedCategoryId: string | null;
   onSelect: (categoryId: string | null) => void;
+  onOpenCategory?: (categoryId: string) => void;
 }) {
   const total = items.reduce((sum, item) => sum + item.amount, 0);
   let angle = 0;
@@ -100,9 +102,20 @@ export function InteractivePieChart({
       </View>
 
       {selectedCategoryId ? (
-        <Pressable onPress={() => onSelect(null)} style={styles.clear}>
-          <Text style={styles.clearText}>Mostrar todas las categorías</Text>
-        </Pressable>
+        <View style={styles.selectedActions}>
+          {onOpenCategory ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => onOpenCategory(selectedCategoryId)}
+              style={styles.open}
+            >
+              <Text style={styles.openText}>Ver gastos de esta categoría</Text>
+            </Pressable>
+          ) : null}
+          <Pressable onPress={() => onSelect(null)} style={styles.clear}>
+            <Text style={styles.clearText}>Mostrar todas las categorías</Text>
+          </Pressable>
+        </View>
       ) : (
         <Text style={styles.hint}>Pulsa una porción o categoría para filtrar el panel.</Text>
       )}
@@ -126,5 +139,13 @@ const styles = StyleSheet.create({
   legendAmount: { color: colors.text, fontSize: 13, fontWeight: '800' },
   clear: { backgroundColor: colors.primaryLight, borderRadius: radius.md, padding: spacing.sm },
   clearText: { color: colors.primary, fontSize: 13, fontWeight: '800' },
+  selectedActions: { gap: spacing.sm, width: '100%' },
+  open: {
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  openText: { color: colors.white, fontSize: 13, fontWeight: '800' },
   hint: { color: colors.muted, fontSize: 12, textAlign: 'center' },
 });

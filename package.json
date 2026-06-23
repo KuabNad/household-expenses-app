@@ -1,6 +1,6 @@
 {
   "name": "household-expenses-app",
-  "version": "1.8.1",
+  "version": "1.9.0",
   "main": "index.ts",
   "dependencies": {
     "@expo/metro-runtime": "~56.0.15",

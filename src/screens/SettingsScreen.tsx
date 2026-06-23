@@ -350,7 +350,7 @@ export function SettingsScreen() {
 
       {!isLocalMode ? <AppButton label="Cerrar sesión" onPress={logout} variant="danger" /> : null}
       <Text style={styles.version}>
-        Gastos del hogar v1.8.1 {isLocalMode ? '· Mac local' : ''}
+        Gastos del hogar v1.9.0 {isLocalMode ? '· Mac local' : ''}
       </Text>
     </Screen>
   );

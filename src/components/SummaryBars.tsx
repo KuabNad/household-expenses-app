@@ -1,9 +1,15 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { SummaryLine } from '../utils/summary';
 import { formatMoney } from '../utils/format';
 import { colors, radius, spacing } from '../utils/theme';
 
-export function SummaryBars({ items }: { items: SummaryLine[] }) {
+export function SummaryBars({
+  items,
+  onPress,
+}: {
+  items: SummaryLine[];
+  onPress?: (item: SummaryLine) => void;
+}) {
   const maxima = items.reduce<Record<string, number>>((result, item) => {
     result[item.currency] = Math.max(result[item.currency] ?? 1, item.amount);
     return result;
@@ -12,7 +18,12 @@ export function SummaryBars({ items }: { items: SummaryLine[] }) {
   return (
     <View style={styles.list}>
       {items.map((item, index) => (
-        <View key={item.id} style={styles.item}>
+        <Pressable
+          disabled={!onPress || !item.sourceId}
+          key={item.id}
+          onPress={() => onPress?.(item)}
+          style={({ pressed }) => [styles.item, pressed && styles.pressed]}
+        >
           <View style={styles.labels}>
             <Text style={styles.name}>{item.label}</Text>
             <Text style={styles.amount}>{formatMoney(item.amount, item.currency)}</Text>
@@ -28,7 +39,7 @@ export function SummaryBars({ items }: { items: SummaryLine[] }) {
               ]}
             />
           </View>
-        </View>
+        </Pressable>
       ))}
     </View>
   );
@@ -37,6 +48,7 @@ export function SummaryBars({ items }: { items: SummaryLine[] }) {
 const styles = StyleSheet.create({
   list: { gap: spacing.md },
   item: { gap: spacing.xs },
+  pressed: { opacity: 0.7 },
   labels: { flexDirection: 'row', justifyContent: 'space-between' },
   name: { color: colors.text, flex: 1, fontSize: 14, fontWeight: '600' },
   amount: { color: colors.text, fontSize: 14, fontWeight: '800' },

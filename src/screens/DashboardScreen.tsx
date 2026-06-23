@@ -1,3 +1,4 @@
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { EmptyState } from '../components/EmptyState';
@@ -17,6 +18,7 @@ import { YearSpendingCalendar } from '../components/YearSpendingCalendar';
 import { useHousehold } from '../hooks/useHousehold';
 import { useAuth } from '../hooks/useAuth';
 import { isLocalMode } from '../services/runtime';
+import type { MainTabParamList } from '../types/navigation';
 import { sortExpenses } from '../utils/expenseSort';
 import { formatMoney, monthKey, toDateInput } from '../utils/format';
 import {
@@ -29,7 +31,9 @@ import {
 } from '../utils/summary';
 import { colors, radius, spacing } from '../utils/theme';
 
-export function DashboardScreen() {
+type Props = BottomTabScreenProps<MainTabParamList, 'Dashboard'>;
+
+export function DashboardScreen({ navigation }: Props) {
   const { user } = useAuth();
   const {
     household,
@@ -98,6 +102,21 @@ export function DashboardScreen() {
     () => spendingByCategory(yearToDateExpenses, categories),
     [categories, yearToDateExpenses],
   );
+  const openCategoryExpenses = (
+    categoryId: string,
+    period: 'month' | 'year',
+  ) => {
+    navigation.navigate('Expenses', {
+      screen: 'ExpenseList',
+      params: {
+        categoryId,
+        period,
+        month: selectedMonth,
+        year: currentYear,
+        requestKey: Date.now(),
+      },
+    });
+  };
 
   return (
     <Screen
@@ -155,6 +174,7 @@ export function DashboardScreen() {
             <Text style={styles.sectionTitle}>Gastos por categoría</Text>
             <InteractivePieChart
               items={categoryTotals}
+              onOpenCategory={(categoryId) => openCategoryExpenses(categoryId, 'month')}
               onSelect={setSelectedCategoryId}
               selectedCategoryId={selectedCategoryId}
             />
@@ -231,7 +251,12 @@ export function DashboardScreen() {
           Incluye todos los meses transcurridos del año y separa las monedas.
         </Text>
         {yearCategoryTotals.length ? (
-          <SummaryBars items={yearCategoryTotals} />
+          <SummaryBars
+            items={yearCategoryTotals}
+            onPress={(item) => {
+              if (item.sourceId) openCategoryExpenses(item.sourceId, 'year');
+            }}
+          />
         ) : (
           <Text style={styles.emptyHint}>Todavía no hay gastos este año.</Text>
         )}
